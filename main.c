@@ -1,5 +1,10 @@
 #include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 #include <ncurses.h>
+
+#include "textbase.h"
+
 #include "text.h"
 
 void discard(void)
@@ -41,7 +46,7 @@ void movement(int movement)
 	move(y, x);
 }
 
-void handlekey(int key)
+void handlekey(Text tx, int key)
 {
 	switch(key)
 	{
@@ -53,7 +58,7 @@ void handlekey(int key)
 		discard();
 		break;
 	default:
-		addch(key);
+		txputc(tx, key);
 	}
 }
 
@@ -68,7 +73,8 @@ int main(int argc, char **argv)
 	mouseinterval(0);
 	keypad(stdscr, 1);
 	mousemask(ALL_MOUSE_EVENTS, NULL);
-
+	idlok(stdscr, 0);
+	idcok(stdscr, 0);
 	/* Vaxeral was here. */
 
 	if(!has_colors())
@@ -80,6 +86,8 @@ int main(int argc, char **argv)
 
 	start_color();
 	init_pair(0, COLOR_RED, COLOR_GREEN);
+
+	Text tx = txcreate(10);
 
 	int running = 1;
 	MEVENT me;
@@ -95,11 +103,11 @@ int main(int argc, char **argv)
 			handlemouse(&me);
 			break;
 		default:
-			handlekey(c);
+			handlekey(tx, c);
 		}	
 		refresh();
 	}
-
+	txfree(tx);
 	discard();
 	return 0;
 }

@@ -1,23 +1,25 @@
-struct line {
+typedef struct line {
 	int flags;
 	char *buf;
 	int len, cap;
-};
+} *Line;
 
 #define TXREADONLY 1
-struct text {
+typedef struct text {
 	int flags;
 	int state;
+	int scrollX, scrollY;
 	int x, y;
 	int curX, curY;
-	struct line *lines;
+	Line lines;
 	int lineCnt, lineCap;
 } *Text;
 
 Text txcreate(int initLineCap);
 void txputc(Text text, int c);
 void txputs(Text text, const char *s);
-void txdelete(Text text);
+void txfree(Text text);
+#define txline(t) ((t)->lines+(t)->curY)
 #define TXMOVE_UP 1
 #define TXMOVE_LEFT 2
 #define TXMOVE_RIGHT 3
