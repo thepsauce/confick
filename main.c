@@ -69,6 +69,8 @@ int main(int argc, char **argv)
 	keypad(stdscr, 1);
 	mousemask(ALL_MOUSE_EVENTS, NULL);
 
+	/* Vaxeral was here. */
+
 	if(!has_colors())
 	{
 		printw("terminal doesn't support color, exiting...");
