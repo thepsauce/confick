@@ -38,14 +38,14 @@ void txmove(Text tx, int x, int y)
 	int sx = x - tx->scrollX;
 	int sy = y - tx->scrollY;
 	if(sx < 0)
-		tx->scrollX = x;
+		tx->scrollX = max(x - 4, 0);
 	else if(sx > tx->width)
-		tx->scrollX += tx->width - sx + 4;
+		tx->scrollX = x - tx->width + 4;
 	// same for y
 	if(sy < 0)
 		tx->scrollY = y;
 	else if(sy > tx->height)
-		tx->scrollY += tx->height - sy + 1;
+		tx->scrollY = y - tx->height;
 }
 
 void txmotion(Text tx, int motion)
@@ -171,12 +171,6 @@ void txputc(Text tx, int c)
 	txmove(tx, tx->curX, tx->curY);
 }
 
-void txdelc(Text tx)
-{
-
-
-}
-
 void _txinsertnstr(Line line, int index, const char *s, int n)
 {
 	char *dest;
@@ -186,6 +180,34 @@ void _txinsertnstr(Line line, int index, const char *s, int n)
 	memmove(dest + n, dest, line->len - index);
 	line->len += n;
 	memcpy(dest, s, n);
+}
+
+void txdelc(Text tx)
+{
+	Line line;
+
+	line = txline(tx);
+	if(tx->curX == line->len)
+	{
+		// bring the next line up to this one
+		if(tx->curY + 1 != tx->lineCnt)
+		{
+			Line nextLine = line + 1;
+			_txinsertnstr(line, line->len, nextLine->buf, nextLine->len);
+			free(nextLine->buf);
+			tx->lineCnt--;
+			memmove(line, nextLine, (tx->lineCnt - tx->curY) * sizeof*line);
+		}
+	}
+	else
+	{
+		// remove char 
+		char *dest = line->buf + tx->curX;
+		line->len--;
+		memmove(dest, dest + 1, line->len - tx->curX);
+	}
+	// update caret
+	txmove(tx, tx->curX, tx->curY);
 }
 
 const char *_txlinesep(const char *s)

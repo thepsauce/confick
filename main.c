@@ -41,13 +41,15 @@ void handlekey(Text tx, int key)
 	case KEY_UP: txmotion(tx, TXMOTION_UP); break;
 	case KEY_RIGHT: txmotion(tx, TXMOTION_RIGHT); break;
 	case KEY_DOWN: txmotion(tx, TXMOTION_DOWN); break;
+	case 330: txdelc(tx); break;
 	case 'q':
 		discard();
 		break;
 	default:
 		//_txgrow(tx);
 		//tx->lineCnt++;
-		txputc(tx, key);
+		if(key <= 255)
+			txputc(tx, key);
 	}
 }
 
@@ -76,7 +78,7 @@ int main(int argc, char **argv)
 	start_color();
 	init_pair(0, COLOR_RED, COLOR_GREEN);
 
-	Text tx = txcreate(3, 0, 0, 30, 30);
+	Text tx = txcreate(3, 0, 0, 30, 10);
 
 	int running = 1;
 	MEVENT me;
@@ -95,9 +97,9 @@ int main(int argc, char **argv)
 			handlekey(tx, c);
 		}
 		erase();
-		for(int i = 0; i < min(tx->lineCnt, tx->height); i++)
+		for(int i = 0; i <= tx->height; i++)
 		{
-			int y = i - tx->scrollY;
+			int y = i + tx->scrollY;
 			if(y >= tx->lineCnt)
 				mvaddch(i, 0, '~');
 			else
