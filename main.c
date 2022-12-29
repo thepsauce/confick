@@ -1,7 +1,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 #include <ncurses.h>
+
+#define min(a, b) \
+({ \
+	__auto_type __a = (a); \
+	__auto_type __b = (b); \
+	__a<__b?__a:__b; \
+})
+
+#define max(a, b) \
+({ \
+	__auto_type __a = (a); \
+	__auto_type __b = (b); \
+	__a<__b?__b:__a; \
+})
 
 #include "textbase.h"
 
@@ -18,46 +33,20 @@ void handlemouse(MEVENT *me)
 	
 }
 
-#define MOVE_LEFT 1
-#define MOVE_RIGHT 2
-#define MOVE_UP 3
-#define MOVE_DOWN 4
-void movement(int movement)
-{
-	int x, y;
-	x = getcurx(stdscr);
-	y = getcury(stdscr);
-
-	switch(movement)
-	{
-	case MOVE_LEFT:
-		x--;
-		break;
-	case MOVE_RIGHT:
-		x++;
-		break;
-	case MOVE_UP: 
-		y--;
-		break;
-	case MOVE_DOWN:
-		y++;
-		break;	
-	}
-	move(y, x);
-}
-
 void handlekey(Text tx, int key)
 {
 	switch(key)
 	{
-	case KEY_LEFT: movement(MOVE_LEFT); break;
-	case KEY_UP: movement(MOVE_UP); break;
-	case KEY_RIGHT: movement(MOVE_RIGHT); break;
-	case KEY_DOWN: movement(MOVE_DOWN); break;
+	case KEY_LEFT: txmotion(tx, TXMOTION_LEFT); break;
+	case KEY_UP: txmotion(tx, TXMOTION_UP); break;
+	case KEY_RIGHT: txmotion(tx, TXMOTION_RIGHT); break;
+	case KEY_DOWN: txmotion(tx, TXMOTION_DOWN); break;
 	case 'q':
 		discard();
 		break;
 	default:
+		//_txgrow(tx);
+		//tx->lineCnt++;
 		txputc(tx, key);
 	}
 }
@@ -87,7 +76,7 @@ int main(int argc, char **argv)
 	start_color();
 	init_pair(0, COLOR_RED, COLOR_GREEN);
 
-	Text tx = txcreate(10);
+	Text tx = txcreate(3, 0, 0, 30, 30);
 
 	int running = 1;
 	MEVENT me;
@@ -104,7 +93,25 @@ int main(int argc, char **argv)
 			break;
 		default:
 			handlekey(tx, c);
-		}	
+		}
+		erase();
+		for(int i = 0; i < min(tx->lineCnt, tx->height); i++)
+		{
+			int y = i - tx->scrollY;
+			if(y >= tx->lineCnt)
+				mvaddch(i, 0, '~');
+			else
+			{
+				// number of visible chars
+				int visCh = tx->lines[y].len - tx->scrollX;
+				if(visCh > 0)
+					mvaddnstr(i + tx->y, tx->x, tx->lines[y].buf + tx->scrollX, min(visCh, tx->width + 1));
+			}
+			mvaddch(i + tx->y, tx->x + tx->width + 1, '#');
+		}
+		for(int i = 0; i <= tx->width; i++)
+			mvaddch(tx->y + tx->height + 1, tx->x + i, '#');
+		wmove(stdscr, tx->curY + tx->y - tx->scrollY, tx->curX + tx->x - tx->scrollX);	
 		refresh();
 	}
 	txfree(tx);
