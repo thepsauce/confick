@@ -11,15 +11,20 @@ typedef struct text {
 	int scrollX, scrollY;
 	int x, y;
 	int width, height;
+	// effective width and height
+	// efHeight is usually equal to height
+	int efWidth, efHeight;
 	int curX, curY;
 	Line lines;
 	int lineCnt, lineCap;
 } *Text;
 
 Text txcreate(int initLineCap, int x, int y, int width, int height);
+void txfree(Text text);
+void txmove(Text tx, int x, int y);
+void txdelc(Text tx);
 void txputc(Text text, int c);
 void txputs(Text text, const char *s);
-void txfree(Text text);
 #define txline(t) ((t)->lines+(t)->curY)
 void txstate(Text text, int state);
 #define TXMOTION_UP 1

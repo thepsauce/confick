@@ -29,6 +29,71 @@ void txfree(Text tx)
 	free(tx);
 }
 
+void txkey(Text tx, int key)
+{
+	switch(key)
+	{
+	case KEY_LEFT: txmotion(tx, TXMOTION_LEFT); break;
+	case KEY_UP: txmotion(tx, TXMOTION_UP); break;
+	case KEY_RIGHT: txmotion(tx, TXMOTION_RIGHT); break;
+	case KEY_DOWN: txmotion(tx, TXMOTION_DOWN); break;
+	case KEY_BACKSPACE: 
+		if(!tx->curX)
+		{
+			if(!tx->curY)
+			{
+				txmove(tx, 0, 0);
+				break;
+			}
+			tx->curY--;
+			tx->curX = tx->lines[tx->curY].len;
+		}
+		else
+			tx->curX--;
+	case 330: txdelc(tx); break;
+	case 'q':
+		discard();
+		break;
+	default:
+		//_txgrow(tx);
+		//tx->lineCnt++;
+		if(key <= 255)
+			txputc(tx, key);
+	}
+}
+
+void txdraw(Text tx)
+{	
+	// this buffer holds the line number
+	char buf[(8 * sizeof(int) - 1) / 3 + 2];
+	for(int i = 0; i <= tx->height; i++)
+	{
+		int y = i + tx->scrollY;
+		snprintf(buf, sizeof(buf), "%d", y + 1);
+		if(y >= tx->lineCnt)
+		{
+			attron(COLOR_PAIR(2));
+			mvaddch(i, tx->x - 2, '~');
+			attroff(COLOR_PAIR(2));
+		}
+		else
+		{
+			// number of visible chars
+			int visCh = tx->lines[y].len - tx->scrollX;
+			attron(COLOR_PAIR(1));
+			mvaddstr(i + tx->y, tx->x - 1 - strlen(buf), buf);
+			attroff(COLOR_PAIR(1));
+			if(visCh > 0)
+				mvaddnstr(i + tx->y, tx->x, tx->lines[y].buf + tx->scrollX, min(visCh, tx->width + 1));
+		}
+		mvaddch(i + tx->y, tx->x + tx->width + 1, '#');
+	}
+	for(int i = 0; i <= tx->width; i++)
+		mvaddch(tx->y + tx->height + 1, tx->x + i, '#');
+	move(tx->curY + tx->y - tx->scrollY, tx->curX + tx->x - tx->scrollX);
+
+}
+
 void txmove(Text tx, int x, int y)
 {
 	int sx, sy; // scrolled x and y
