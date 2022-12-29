@@ -4,6 +4,13 @@ typedef struct line {
 	int len, cap;
 } *Line;
 
+struct text;
+
+typedef struct motion {
+	int id;
+	void (*motion)(struct text*, int *x, int *y);
+} *Motion;
+
 #define TXREADONLY 1
 typedef struct text {
 	int flags;
@@ -11,9 +18,10 @@ typedef struct text {
 	int scrollX, scrollY;
 	int x, y;
 	int width, height;
-	// effective width and height
-	// efHeight is usually equal to height
-	int efWidth, efHeight;
+	struct {
+		Motion elems;
+		int cnt, cap;
+	} motions;
 	int curX, curY;
 	Line lines;
 	int lineCnt, lineCap;
@@ -33,4 +41,4 @@ void txstate(Text text, int state);
 #define TXMOTION_DOWN 4
 #define TXMOTION_SOL 5
 #define TXMOTION_EOL 6
-void txmotion(Text text, int motion);
+bool txmotion(Text text, int motion);

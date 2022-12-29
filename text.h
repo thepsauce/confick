@@ -2,17 +2,12 @@ Text txcreate(int initLineCap, int x, int y, int width, int height)
 {
 	Text tx;
 
-	tx = malloc(sizeof(*tx));
-	tx->flags = 0;
-	tx->state = 0;
-	tx->scrollX = 0;
-	tx->scrollY = 0;
+	tx = malloc(sizeof*tx);
+	memset(tx, 0, sizeof*tx);
 	tx->x = x;
 	tx->y = y;
 	tx->width = width;
 	tx->height = height;
-	tx->curX = 0;
-	tx->curY = 0;
 	initLineCap = initLineCap < 1 ? 1 : initLineCap;
 	tx->lines = malloc(initLineCap * sizeof*tx->lines);
 	tx->lineCap = initLineCap;
@@ -31,35 +26,37 @@ void txfree(Text tx)
 
 void txkey(Text tx, int key)
 {
-	switch(key)
+	int x, y;
+	for(int i = 0; i < tx->motions.cnt; i++)
 	{
-	case KEY_LEFT: txmotion(tx, TXMOTION_LEFT); break;
-	case KEY_UP: txmotion(tx, TXMOTION_UP); break;
-	case KEY_RIGHT: txmotion(tx, TXMOTION_RIGHT); break;
-	case KEY_DOWN: txmotion(tx, TXMOTION_DOWN); break;
-	case KEY_BACKSPACE: 
-		if(!tx->curX)
+		if(tx->motions.elems[i].id == key)
 		{
-			if(!tx->curY)
-			{
-				txmove(tx, 0, 0);
-				break;
-			}
-			tx->curY--;
-			tx->curX = tx->lines[tx->curY].len;
+			tx->motions.elems[i].motion(tx, &x, &y);
+			txmove(tx, x, y);
+			return;
 		}
-		else
-			tx->curX--;
-	case 330: txdelc(tx); break;
-	case 'q':
-		discard();
-		break;
-	default:
-		//_txgrow(tx);
-		//tx->lineCnt++;
-		if(key <= 255)
-			txputc(tx, key);
 	}
+	if(key <= 255)
+		txputc(tx, key);
+}
+
+void txputmotion(Text tx, int id, void (*motion)(Text tx, int *x, int *y))
+{
+	for(int i = 0; i < tx->motions.cnt; i++)
+		if(tx->motions.elems[i].id == id)
+		{
+			tx->motions.elems[i].motion = motion;
+			return;
+		}
+	if(tx->motions.cnt + 1 > tx->motions.cap)
+	{
+		tx->motions.cap *= 2;
+		tx->motions.cap++;
+		tx->motions.elems = realloc(tx->motions.elems, tx->motions.cap * sizeof *tx->motions.elems);
+	}
+	tx->motions.elems[tx->motions.cnt].id = id;
+	tx->motions.elems[tx->motions.cnt].motion = motion;
+	tx->motions.cnt++;
 }
 
 void txdraw(Text tx)
@@ -69,7 +66,7 @@ void txdraw(Text tx)
 	for(int i = 0; i <= tx->height; i++)
 	{
 		int y = i + tx->scrollY;
-		snprintf(buf, sizeof(buf), "%d", y + 1);
+		snprintf(buf, sizeof buf, "%d", y + 1);
 		if(y >= tx->lineCnt)
 		{
 			attron(COLOR_PAIR(2));
@@ -113,52 +110,6 @@ void txmove(Text tx, int x, int y)
 		tx->scrollY = y;
 	else if(sy > tx->height)
 		tx->scrollY = y - tx->height;
-}
-
-void txmotion(Text tx, int motion)
-{
-	int x, y;
-
-	x = tx->curX;
-	y = tx->curY;
-	switch(motion)
-	{
-	case TXMOTION_LEFT:
-		if(!x)
-		{
-			if(!y)
-				break;
-			y--;
-			x = tx->lines[y].len;
-			break;
-		}
-		x--;
-		break;
-	case TXMOTION_UP:
-		if(!y)
-			break;
-		y--;
-		x = min(x, tx->lines[y].len);
-		break;
-	case TXMOTION_RIGHT:
-		if(x == tx->lines[y].len)
-		{
-			if(y + 1 == tx->lineCnt)
-				break;
-			y++;
-			x = 0;
-			break;
-		}
-		x++;
-		break;
-	case TXMOTION_DOWN: 
-		if(y + 1 == tx->lineCnt)
-			break;
-		y++;
-		x = min(x, tx->lines[y].len);
-		break;
-	}
-	txmove(tx, x, y);
 }
 
 void _txgrow(Text tx)
@@ -249,32 +200,30 @@ void _txinsertnstr(Line line, int index, const char *s, int n)
 	memcpy(dest, s, n);
 }
 
-void txdelc(Text tx)
+void _txdelete(Text tx, int x, int y)
 {
 	Line line;
 
-	line = txline(tx);
-	if(tx->curX == line->len)
+	line = tx->lines + y;
+	if(x == line->len)
 	{
 		// bring the next line up to this one
-		if(tx->curY + 1 != tx->lineCnt)
+		if(y + 1 != tx->lineCnt)
 		{
 			Line nextLine = line + 1;
 			_txinsertnstr(line, line->len, nextLine->buf, nextLine->len);
 			free(nextLine->buf);
 			tx->lineCnt--;
-			memmove(nextLine, nextLine + 1, (tx->lineCnt - tx->curY) * sizeof*line);
+			memmove(nextLine, nextLine + 1, (tx->lineCnt - y) * sizeof*line);
 		}
 	}
 	else
 	{
 		// remove char 
-		char *dest = line->buf + tx->curX;
+		char *dest = line->buf + x;
 		line->len--;
-		memmove(dest, dest + 1, line->len - tx->curX);
+		memmove(dest, dest + 1, line->len - x);
 	}
-	// update caret
-	txmove(tx, tx->curX, tx->curY);
 }
 
 const char *_txlinesep(const char *s)
