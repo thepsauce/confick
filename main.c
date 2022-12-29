@@ -41,6 +41,19 @@ void handlekey(Text tx, int key)
 	case KEY_UP: txmotion(tx, TXMOTION_UP); break;
 	case KEY_RIGHT: txmotion(tx, TXMOTION_RIGHT); break;
 	case KEY_DOWN: txmotion(tx, TXMOTION_DOWN); break;
+	case KEY_BACKSPACE: 
+		if(!tx->curX)
+		{
+			if(!tx->curY)
+			{
+				txmove(tx, 0, 0);
+				break;
+			}
+			tx->curY--;
+			tx->curX = tx->lines[tx->curY].len;
+		}
+		else
+			tx->curX--;
 	case 330: txdelc(tx); break;
 	case 'q':
 		discard();
@@ -78,11 +91,13 @@ int main(int argc, char **argv)
 	start_color();
 	init_pair(0, COLOR_RED, COLOR_GREEN);
 
-	Text tx = txcreate(3, 0, 0, 30, 10);
+	Text tx = txcreate(3, 5, 0, 30, 10);
 
 	int running = 1;
 	MEVENT me;
 	int c;
+	// this buffer holds the line number
+	char buf[(8 * sizeof(int) - 1) / 3 + 2];
 	while(running)
 	{
 		c = getch();
@@ -100,12 +115,14 @@ int main(int argc, char **argv)
 		for(int i = 0; i <= tx->height; i++)
 		{
 			int y = i + tx->scrollY;
+			sprintf(buf, "%d", y + 1);
 			if(y >= tx->lineCnt)
-				mvaddch(i, 0, '~');
+				mvaddch(i, tx->x - 2, '~');
 			else
 			{
 				// number of visible chars
 				int visCh = tx->lines[y].len - tx->scrollX;
+				mvaddstr(i + tx->y, tx->x - 1 - strlen(buf), buf);
 				if(visCh > 0)
 					mvaddnstr(i + tx->y, tx->x, tx->lines[y].buf + tx->scrollX, min(visCh, tx->width + 1));
 			}

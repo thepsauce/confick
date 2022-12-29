@@ -31,16 +31,18 @@ void txfree(Text tx)
 
 void txmove(Text tx, int x, int y)
 {
+	int sx, sy; // scrolled x and y
+
 	assert(x >= 0 && y >= 0 && y < tx->lineCnt && x <= tx->lines[y].len && "txmove > out of bounds");
 	tx->curX = x;
 	tx->curY = y;
 	// make caret visible if it is outside
-	int sx = x - tx->scrollX;
-	int sy = y - tx->scrollY;
+	sx = x - tx->scrollX;
+	sy = y - tx->scrollY;
 	if(sx < 0)
 		tx->scrollX = max(x - 4, 0);
 	else if(sx > tx->width)
-		tx->scrollX = x - tx->width + 4;
+		tx->scrollX = x - tx->width + 3;
 	// same for y
 	if(sy < 0)
 		tx->scrollY = y;
@@ -196,7 +198,7 @@ void txdelc(Text tx)
 			_txinsertnstr(line, line->len, nextLine->buf, nextLine->len);
 			free(nextLine->buf);
 			tx->lineCnt--;
-			memmove(line, nextLine, (tx->lineCnt - tx->curY) * sizeof*line);
+			memmove(nextLine, nextLine + 1, (tx->lineCnt - tx->curY) * sizeof*line);
 		}
 	}
 	else
