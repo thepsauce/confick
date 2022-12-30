@@ -4,7 +4,6 @@
 #include <assert.h>
 #include <ncurses.h>
 #include <stdio.h>
-#include <signal.h>
 
 #define min(a, b) \
 ({ \
@@ -39,14 +38,6 @@ void handlemouse(MEVENT *me)
 
 int main(int argc, char **argv)
 {
-	void handler(int signo)
-	{
-		endwin();
-	}
-	signal(SIGABRT, handler);
-	signal(SIGINT, handler);
-	signal(SIGTERM, handler);
-
 	initscr();
 
 	noecho();
@@ -89,8 +80,13 @@ int main(int argc, char **argv)
 	txputmotion(tx, TXTYPEWRITER, 'q', tmp_discard);
 	
 	txputmotion(tx, TXTYPEWRITER, '\n', txmotion_c_nl_indent);
+	txputmotion(tx, TXTYPEWRITER, KEY_HOME, txsave);
 
-	txopen(tx, "main.c");
+
+	if(argc > 1) {
+		tx->fileName = argv[1];
+		txopen(tx, tx->fileName);
+	}
 
 	erase();
 	txdraw(tx);
