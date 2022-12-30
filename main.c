@@ -60,19 +60,20 @@ int main(int argc, char **argv)
 	init_pair(2, COLOR_MAGENTA, 0);
 
 	Text tx = txcreate(3, 5, 0, 30, 10);
-	txputmotion(tx, KEY_UP, txmotion_up);
-	txputmotion(tx, KEY_LEFT, txmotion_left);
-	txputmotion(tx, KEY_RIGHT, txmotion_right);
-	txputmotion(tx, KEY_DOWN, txmotion_down);
-	txputmotion(tx, 330, txmotion_delete);
-	txputmotion(tx, KEY_BACKSPACE, txmotion_backdelete);
+	tx->mode = TXTYPEWRITER; 
+	txputmotion(tx, TXTYPEWRITER, KEY_UP, txmotion_up);
+	txputmotion(tx, TXTYPEWRITER, KEY_LEFT, txmotion_left);
+	txputmotion(tx, TXTYPEWRITER, KEY_RIGHT, txmotion_right);
+	txputmotion(tx, TXTYPEWRITER, KEY_DOWN, txmotion_down);
+	txputmotion(tx, TXTYPEWRITER, KEY_DC, txmotion_delete);
+	txputmotion(tx, TXTYPEWRITER, KEY_BACKSPACE, txmotion_backdelete);
 	void tmp_discard(Text tx, int *px, int *py)
 	{
 		txfree(tx);
 		discard();
 	}
-	txputmotion(tx, 'q', tmp_discard);
-
+	txputmotion(tx, TXTYPEWRITER, 'q', tmp_discard);
+	
 	MEVENT me;
 	int c;
 	while(1)

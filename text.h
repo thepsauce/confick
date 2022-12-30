@@ -21,17 +21,19 @@ void txfree(Text tx)
 	for(int i = 0; i < tx->lineCnt; i++)
 		free(tx->lines[i].buf);
 	free(tx->lines);
+	for(int i = 0; i < sizeof(tx->motions) / sizeof(*tx->motions); i++)
+		free(tx->motions[i].elems);
 	free(tx);
 }
 
 void txkey(Text tx, int key)
 {
 	int x, y;
-	for(int i = 0; i < tx->motions.cnt; i++)
+	for(int i = 0; i < tx->motions[tx->mode].cnt; i++)
 	{
-		if(tx->motions.elems[i].id == key)
+		if(tx->motions[tx->mode].elems[i].id == key)
 		{
-			tx->motions.elems[i].motion(tx, &x, &y);
+			tx->motions[tx->mode].elems[i].motion(tx, &x, &y);
 			txmove(tx, x, y);
 			return;
 		}
@@ -40,23 +42,23 @@ void txkey(Text tx, int key)
 		txputc(tx, key);
 }
 
-void txputmotion(Text tx, int id, void (*motion)(Text tx, int *x, int *y))
+void txputmotion(Text tx, int mode, int id, void (*motion)(Text tx, int *x, int *y))
 {
-	for(int i = 0; i < tx->motions.cnt; i++)
-		if(tx->motions.elems[i].id == id)
+	for(int i = 0; i < tx->motions[mode].cnt; i++)
+		if(tx->motions[mode].elems[i].id == id)
 		{
-			tx->motions.elems[i].motion = motion;
+			tx->motions[mode].elems[i].motion = motion;
 			return;
 		}
-	if(tx->motions.cnt + 1 > tx->motions.cap)
+	if(tx->motions[mode].cnt + 1 > tx->motions[mode].cap)
 	{
-		tx->motions.cap *= 2;
-		tx->motions.cap++;
-		tx->motions.elems = realloc(tx->motions.elems, tx->motions.cap * sizeof *tx->motions.elems);
+		tx->motions[mode].cap *= 2;
+		tx->motions[mode].cap++;
+		tx->motions[mode].elems = realloc(tx->motions[mode].elems, tx->motions[mode].cap * sizeof *tx->motions[mode].elems);
 	}
-	tx->motions.elems[tx->motions.cnt].id = id;
-	tx->motions.elems[tx->motions.cnt].motion = motion;
-	tx->motions.cnt++;
+	tx->motions[mode].elems[tx->motions[mode].cnt].id = id;
+	tx->motions[mode].elems[tx->motions[mode].cnt].motion = motion;
+	tx->motions[mode].cnt++;
 }
 
 void txdraw(Text tx)
