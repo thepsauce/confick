@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 	txputmotion(tx, TXTYPEWRITER, KEY_HOME, txsave);
 
 	if(argc > 1) {
-		txopen(tx, tx->fileName);
+		txopen(tx, argv[1]);
 	}
 
 	erase();
