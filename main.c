@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <ncurses.h>
+#include <stdio.h>
 
 #define min(a, b) \
 ({ \
@@ -28,6 +29,7 @@ void discard(void)
 
 #include "motion.h"
 #include "text.h"
+#include "io.h"
 
 void handlemouse(MEVENT *me)
 {
@@ -59,6 +61,8 @@ int main(int argc, char **argv)
 	init_pair(1, COLOR_RED, 0);
 	init_pair(2, COLOR_MAGENTA, 0);
 
+
+
 	Text tx = txcreate(3, 5, 0, 30, 10);
 	tx->mode = TXTYPEWRITER; 
 	txputmotion(tx, TXTYPEWRITER, KEY_UP, txmotion_up);
@@ -74,6 +78,8 @@ int main(int argc, char **argv)
 	}
 	txputmotion(tx, TXTYPEWRITER, 'q', tmp_discard);
 	
+	txopen(tx, "main.c");
+
 	MEVENT me;
 	int c;
 	while(1)
