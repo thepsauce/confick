@@ -1,4 +1,4 @@
-void txmotion_up(Text tx, int *px, int *py)
+void txmotion_up(Text tx)
 {
 	int x, y;
 
@@ -12,11 +12,10 @@ void txmotion_up(Text tx, int *px, int *py)
 		x = _txshiftvisx(tx, x, y);
 	}
 
-	*px = x;
-	*py = y;
+	txmove(tx, x, y);
 }
 
-void txmotion_left(Text tx, int *px, int *py)
+void txmotion_left(Text tx)
 {
 	int x, y;
 
@@ -36,11 +35,10 @@ void txmotion_left(Text tx, int *px, int *py)
 		x--;
 	}
 
-	*px = x;
-	*py = y;
+	txmove(tx, x, y);
 }
 
-void txmotion_right(Text tx, int *px, int *py)
+void txmotion_right(Text tx)
 {
 	int x, y;
 
@@ -60,11 +58,10 @@ void txmotion_right(Text tx, int *px, int *py)
 		x++;
 	}
 
-	*px = x;
-	*py = y;
+	txmove(tx, x, y);
 }
 
-void txmotion_down(Text tx, int *px, int *py)
+void txmotion_down(Text tx)
 {
 	int x, y;
 
@@ -78,11 +75,10 @@ void txmotion_down(Text tx, int *px, int *py)
 		x = _txshiftvisx(tx, x, y);
 	}
 
-	*px = x;
-	*py = y;
+	txmove(tx, x, y);
 }
 
-void txmotion_delete(Text tx, int *px, int *py)
+void txmotion_delete(Text tx)
 {
 	int x, y;
 
@@ -93,11 +89,10 @@ void txmotion_delete(Text tx, int *px, int *py)
 	if(y + 1 != tx->lineCnt || x != tx->lines[y].len)
 		_txdelete(tx, x, y);	
 
-	*px = x;
-	*py = y;	
+	txmove(tx, x, y);
 }
 
-void txmotion_backdelete(Text tx, int *px, int *py)
+void txmotion_backdelete(Text tx)
 {
 	int x, y;
 
@@ -123,8 +118,7 @@ void txmotion_backdelete(Text tx, int *px, int *py)
 	}
 	_txdelete(tx, x, y);
 no_delete:
-	*px = x;
-	*py = y;
+	txmove(tx, x, y);
 }
 
 

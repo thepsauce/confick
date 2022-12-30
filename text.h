@@ -33,8 +33,7 @@ void txkey(Text tx, int key)
 	{
 		if(tx->motions[tx->mode].elems[i].id == key)
 		{
-			tx->motions[tx->mode].elems[i].motion(tx, &x, &y);
-			txmove(tx, x, y);
+			tx->motions[tx->mode].elems[i].motion(tx);
 			return;
 		}
 	}
@@ -42,7 +41,7 @@ void txkey(Text tx, int key)
 		txputc(tx, key);
 }
 
-void txputmotion(Text tx, int mode, int id, void (*motion)(Text tx, int *x, int *y))
+void txputmotion(Text tx, int mode, int id, void (*motion)(Text tx))
 {
 	for(int i = 0; i < tx->motions[mode].cnt; i++)
 		if(tx->motions[mode].elems[i].id == id)
@@ -105,11 +104,14 @@ void txdraw(Text tx)
 	Line line;
 	char *buf;
 	int len;
+	int y;
 	int visCh;
+	int index;
+	int visX;
 
 	for(int i = 0; i <= tx->height; i++)
 	{
-		int y = i + tx->scrollY;
+		y = i + tx->scrollY;
 		if(y >= tx->lineCnt)
 		{
 			attron(COLOR_PAIR(2));
@@ -123,19 +125,17 @@ void txdraw(Text tx)
 			mvaddstr(i + tx->y, tx->x - 1 - strlen(lnNBuf), lnNBuf);
 			attroff(COLOR_PAIR(1));
 			
-			int x, y;
-			x = -tx->scrollX;
-			y = tx->y + i;
+			index = -tx->scrollX;
 			line = tx->lines + y;
 			for(len = line->len, buf = line->buf; len; len--, buf++)
 			{
-				if(x >= 0 && !isspace(*buf))
-					mvaddch(y, tx->x + x, *buf);
+				if(index >= 0 && !isspace(*buf))
+					mvaddch(tx->y + i, tx->x + index, *buf);
 				if(*buf == '\t')
-					x += 4 - x % 4;	
+					index += 4 - index % 4;	
 				else
-					x++;
-				if(x > tx->width)
+					index++;
+				if(index > tx->width)
 					break;
 			}
 		}
@@ -143,8 +143,8 @@ void txdraw(Text tx)
 	}
 	for(int i = 0; i <= tx->width; i++)
 		mvaddch(tx->y + tx->height + 1, tx->x + i, '#');
-	int vx = _txviscurx(tx);
-	move(tx->y + tx->curY - tx->scrollY, tx->x + vx);
+	visX = _txviscurx(tx);
+	move(tx->y + tx->curY - tx->scrollY, tx->x + visX);
 
 }
 
