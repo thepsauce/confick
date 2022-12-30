@@ -41,7 +41,6 @@ int main(int argc, char **argv)
 {
 	void handler(int signo)
 	{
-		printf("SIGNALLED\n");
 		endwin();
 	}
 	signal(SIGABRT, handler);
@@ -91,7 +90,7 @@ int main(int argc, char **argv)
 	
 	txputmotion(tx, TXTYPEWRITER, '\n', txmotion_c_nl_indent);
 
-	txopen(tx, "main.c");
+	//	txopen(tx, "main.c");
 
 	MEVENT me;
 	int c;

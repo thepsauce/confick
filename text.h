@@ -61,6 +61,26 @@ void txputmotion(Text tx, int mode, int id, void (*motion)(Text tx, int *x, int 
 	tx->motions[mode].cnt++;
 }
 
+int _txshiftvisx(Text tx, int visX, int indY)
+{
+	Line line;
+	int len;
+	char *buf;
+	int index;
+
+	visX += tx->scrollX;
+	index = 0;
+	line = tx->lines + indY;
+	for(len = line->len, buf = line->buf; index < visX && len; len--, buf++)
+	{
+		if(*buf == '\t')
+			index += 4 - index % 4;
+		else
+			index++;
+	}
+	return line->len - len;
+}
+
 int _txviscurx(Text tx)
 {
 	Line line;
@@ -75,7 +95,7 @@ int _txviscurx(Text tx)
 		else
 			x++;
 	}
-	return x;
+	return x - tx->scrollX;
 }
 
 void txdraw(Text tx)
@@ -142,9 +162,9 @@ void txmove(Text tx, int x, int y)
 	sx = _txviscurx(tx);
 	sy = y - tx->scrollY;
 	if(sx < 0)
-		tx->scrollX = max(x - 4, 0);
+		tx->scrollX = max(sx + tx->scrollX - 4, 0);
 	else if(sx > tx->width)
-		tx->scrollX = x - tx->width + 3;
+		tx->scrollX = sx + tx->scrollX - tx->width + 4;
 	// same for y
 	if(sy < 0)
 		tx->scrollY = y;

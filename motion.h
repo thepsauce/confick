@@ -7,8 +7,9 @@ void txmotion_up(Text tx, int *px, int *py)
 
 	if(y)
 	{
+		x = _txviscurx(tx);
 		y--;
-		x = min(x, tx->lines[y].len);
+		x = _txshiftvisx(tx, x, y);
 	}
 
 	*px = x;
@@ -72,8 +73,9 @@ void txmotion_down(Text tx, int *px, int *py)
 
 	if(y + 1 != tx->lineCnt)
 	{
+		x = _txviscurx(tx);
 		y++;
-		x = min(x, tx->lines[y].len);
+		x = _txshiftvisx(tx, x, y);
 	}
 
 	*px = x;
