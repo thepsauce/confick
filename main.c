@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <ncurses.h>
 #include <stdio.h>
+#include <signal.h>
 
 #define min(a, b) \
 ({ \
@@ -38,6 +39,15 @@ void handlemouse(MEVENT *me)
 
 int main(int argc, char **argv)
 {
+	void handler(int signo)
+	{
+		printf("SIGNALLED\n");
+		endwin();
+	}
+	signal(SIGABRT, handler);
+	signal(SIGINT, handler);
+	signal(SIGTERM, handler);
+
 	initscr();
 
 	noecho();

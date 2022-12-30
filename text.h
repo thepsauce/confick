@@ -126,7 +126,6 @@ void txdraw(Text tx)
 	}
 	for(int i = 0; i <= tx->width; i++)
 		mvaddch(tx->y + tx->height + 1, tx->x + i, '#');
-	// move ignores tabs, so we have to handle that
 	int vx = _txviscurx(tx);
 	move(tx->y + tx->curY - tx->scrollY, tx->x + vx);
 
