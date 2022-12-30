@@ -90,7 +90,7 @@ int main(int argc, char **argv)
 	
 	txputmotion(tx, TXTYPEWRITER, '\n', txmotion_c_nl_indent);
 
-	//	txopen(tx, "main.c");
+	txopen(tx, "main.c");
 
 	MEVENT me;
 	int c;
