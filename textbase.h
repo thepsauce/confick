@@ -8,7 +8,7 @@ struct text;
 
 typedef struct motion {
 	int id;
-	void (*motion)(struct text*, int *x, int *y);
+	void (*motion)(struct text *text);
 } *Motion;
 
 #define TXREADONLY 1
@@ -39,7 +39,7 @@ void txputc(Text text, int c);
 void txputs(Text text, const char *s);
 #define txline(t) ((t)->lines+(t)->curY)
 void txmode(Text text, int mode);
-void txputmotion(Text tx, int mode, int id, void (*motion)(Text tx, int *px, int *py));
+void txputmotion(Text tx, int mode, int id, void (*motion)(Text tx));
 void txopen(Text tx, const char *fileName);
 void txsave(Text tx);
 

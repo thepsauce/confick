@@ -1,4 +1,4 @@
-void txmotion_c_nl_indent(Text tx, int *px, int *py)
+void txmotion_c_nl_indent(Text tx)
 {
 	int x, y;
 	int sp;
@@ -39,6 +39,5 @@ void txmotion_c_nl_indent(Text tx, int *px, int *py)
 		x = tabs;
 	}
 
-	*px = x;
-	*py = y;
+	txmove(tx, x, y);
 }

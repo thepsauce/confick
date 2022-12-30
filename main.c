@@ -81,7 +81,7 @@ int main(int argc, char **argv)
 	txputmotion(tx, TXTYPEWRITER, KEY_DOWN, txmotion_down);
 	txputmotion(tx, TXTYPEWRITER, KEY_DC, txmotion_delete);
 	txputmotion(tx, TXTYPEWRITER, KEY_BACKSPACE, txmotion_backdelete);
-	void tmp_discard(Text tx, int *px, int *py)
+	void tmp_discard(Text tx)
 	{
 		txfree(tx);
 		discard();
