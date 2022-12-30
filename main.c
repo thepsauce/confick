@@ -92,6 +92,10 @@ int main(int argc, char **argv)
 
 	txopen(tx, "main.c");
 
+	erase();
+	txdraw(tx);
+	refresh();
+
 	MEVENT me;
 	int c;
 	while(1)
