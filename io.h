@@ -16,7 +16,7 @@ void txopen(Text tx, const char *fileName)
         }
 		else
 		{
-            _txinsertchar(&tx->lines[tx->lineCnt], tx->lines[tx->lineCnt].len, c);
+            _txinsertchar(&tx->lines[tx->lineCnt - 1], tx->lines[tx->lineCnt - 1].len, c);
     	}
 	}
     fclose(file);
