@@ -64,11 +64,15 @@ void txputmotion(Text tx, int mode, int id, void (*motion)(Text tx, int *x, int 
 void txdraw(Text tx)
 {	
 	// this buffer holds the line number
-	char buf[(8 * sizeof(int) - 1) / 3 + 2];
+	char lnNBuf[(8 * sizeof(int) - 1) / 3 + 2];
+	Line line;
+	char *buf;
+	int len;
+	int visCh;
+
 	for(int i = 0; i <= tx->height; i++)
 	{
 		int y = i + tx->scrollY;
-		snprintf(buf, sizeof buf, "%d", y + 1);
 		if(y >= tx->lineCnt)
 		{
 			attron(COLOR_PAIR(2));
@@ -77,19 +81,45 @@ void txdraw(Text tx)
 		}
 		else
 		{
-			// number of visible chars
-			int visCh = tx->lines[y].len - tx->scrollX;
+			line = tx->lines + y;
+			buf = line->buf;
+			len = line->len;
+
+			snprintf(lnNBuf, sizeof lnNBuf, "%d", y + 1);
 			attron(COLOR_PAIR(1));
-			mvaddstr(i + tx->y, tx->x - 1 - strlen(buf), buf);
+			mvaddstr(i + tx->y, tx->x - 1 - strlen(lnNBuf), lnNBuf);
 			attroff(COLOR_PAIR(1));
-			if(visCh > 0)
-				mvaddnstr(i + tx->y, tx->x, tx->lines[y].buf + tx->scrollX, min(visCh, tx->width + 1));
+			
+			int x, y;
+			x = -tx->scrollX;
+			y = tx->y + i;
+			for(; len; len--, buf++)
+			{
+				if(x >= 0 && !isspace(*buf))
+					mvaddch(y, tx->x + x, *buf);
+				if(*buf == '\t')
+					x += 4 - x % 4;	
+				else
+					x++;
+				if(x > tx->width)
+					break;
+			}
 		}
 		mvaddch(i + tx->y, tx->x + tx->width + 1, '#');
 	}
 	for(int i = 0; i <= tx->width; i++)
 		mvaddch(tx->y + tx->height + 1, tx->x + i, '#');
-	move(tx->curY + tx->y - tx->scrollY, tx->curX + tx->x - tx->scrollX);
+	// move ignores tabs, so we have to handle that
+	int curX = 0;
+	line = tx->lines + tx->curY;
+	for(buf = line->buf, len = tx->curX; len; len--, buf++)
+	{
+		if(*buf == '\t')
+			curX += 4 - curX % 4;
+		else
+			curX++;
+	}
+	move(tx->curY + tx->y - tx->scrollY, curX + tx->x - tx->scrollX);
 
 }
 

@@ -26,6 +26,7 @@ void discard(void)
 
 #include "textbase.h"
 
+#include "mode_normal.h"
 #include "motion.h"
 #include "text.h"
 
@@ -74,6 +75,8 @@ int main(int argc, char **argv)
 	}
 	txputmotion(tx, TXTYPEWRITER, 'q', tmp_discard);
 	
+	txputmotion(tx, TXTYPEWRITER, '\n', txmotion_c_nl_indent);
+
 	MEVENT me;
 	int c;
 	while(1)
