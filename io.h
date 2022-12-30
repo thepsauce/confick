@@ -3,21 +3,19 @@ void txopen(Text tx, const char *fileName)
     FILE *file = fopen(fileName, "r");
     if(!file)
         return;
-    int c, pc;
+    int c;
     int i = 0;
-    pc = 0;
-    while(pc != EOF)
+	txclear(tx);
+	while((c = fgetc(file)) != EOF)
     {
-        c = fgetc(file);
-        if(c == '\n' || c == '\r')
+        if(c == '\n')
         {
             _txgrow(tx);
             ++i;
             memset(&tx->lines[i], 0, sizeof(*tx->lines));
             tx->lineCnt++;
-        } else if(c != EOF)
+        } else
             _txinsertchar(&tx->lines[i], tx->lines[i].len, c);
-        pc = c;
     }
     tx->fileName = strdup(fileName);
     fclose(file);

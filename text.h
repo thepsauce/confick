@@ -23,7 +23,27 @@ void txfree(Text tx)
 	free(tx->lines);
 	for(int i = 0; i < sizeof(tx->motions) / sizeof(*tx->motions); i++)
 		free(tx->motions[i].elems);
+	free(tx->fileName);
 	free(tx);
+}
+
+void txclear(Text tx)
+{
+	tx->lines[0].len = 0;
+	for(int i = 1; i < tx->lineCnt; i++)
+		free(tx->lines[i].buf);
+	tx->curX = 0;
+	tx->curY = 0;
+	tx->scrollX = 0;
+	tx->scrollY = 0;
+	tx->lineCnt = 1;
+	if(tx->lineCap > TXCLEARKEEPTHRESHOLD)
+	{
+		struct line tmp = *tx->lines;
+		free(tx->lines);
+		tx->lines = malloc(sizeof*tx->lines);
+		*tx->lines = tmp;
+	}
 }
 
 void txkey(Text tx, int key)
@@ -73,7 +93,7 @@ int _txshiftvisx(Text tx, int visX, int indY)
 	for(len = line->len, buf = line->buf; index < visX && len; len--, buf++)
 	{
 		if(*buf == '\t')
-			index += 4 - index % 4;
+			index += TXTABWIDTH - index % TXTABWIDTH;
 		else
 			index++;
 	}
@@ -90,7 +110,7 @@ int _txviscurx(Text tx)
 	for(buf = line->buf, len = tx->curX; len; len--, buf++)
 	{
 		if(*buf == '\t')
-			x += 4 - x % 4;
+			x += TXTABWIDTH - x % TXTABWIDTH;
 		else
 			x++;
 	}
@@ -132,7 +152,7 @@ void txdraw(Text tx)
 				if(index >= 0 && !isspace(*buf))
 					mvaddch(tx->y + i, tx->x + index, *buf);
 				if(*buf == '\t')
-					index += 4 - index % 4;	
+					index += TXTABWIDTH - index % TXTABWIDTH;	
 				else
 					index++;
 				if(index > tx->width)
@@ -159,9 +179,9 @@ void txmove(Text tx, int x, int y)
 	sx = _txviscurx(tx);
 	sy = y - tx->scrollY;
 	if(sx < 0)
-		tx->scrollX = max(sx + tx->scrollX - 4, 0);
+		tx->scrollX = max(sx + tx->scrollX - TXTABWIDTH, 0);
 	else if(sx > tx->width)
-		tx->scrollX = sx + tx->scrollX - tx->width + 4;
+		tx->scrollX = sx + tx->scrollX - tx->width + TXTABWIDTH;
 	// same for y
 	if(sy < 0)
 		tx->scrollY = y;

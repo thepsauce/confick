@@ -121,6 +121,3 @@ no_delete:
 	txmove(tx, x, y);
 }
 
-
-
-

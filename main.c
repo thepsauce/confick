@@ -82,7 +82,6 @@ int main(int argc, char **argv)
 	txputmotion(tx, TXTYPEWRITER, '\n', txmotion_c_nl_indent);
 	txputmotion(tx, TXTYPEWRITER, KEY_HOME, txsave);
 
-
 	if(argc > 1) {
 		tx->fileName = argv[1];
 		txopen(tx, tx->fileName);

@@ -12,9 +12,14 @@ typedef struct motion {
 } *Motion;
 
 #define TXREADONLY 1
+
 #define TXNORMAL 0
 #define TXSPECIAL 1
 #define TXTYPEWRITER 2
+
+#define TXCLEARKEEPTHRESHOLD 64
+#define TXTABWIDTH 4
+
 typedef struct text {
 	int flags;
 	char *fileName;
@@ -33,6 +38,7 @@ typedef struct text {
 
 Text txcreate(int initLineCap, int x, int y, int width, int height);
 void txfree(Text text);
+void txclear(Text tx);
 void txmove(Text tx, int x, int y);
 void txdelc(Text tx);
 void txputc(Text text, int c);
@@ -64,3 +70,6 @@ void _txdelete(Text tx, int x, int y);
 const char *_txlinesep(const char *s);
 // returns the length of the line separator (\r, \n, \r\n)
 int _txlineseplen(const char *s);
+// gets the number of spaces in front of a line
+int _txunitspacing(Text tx, int y);
+
