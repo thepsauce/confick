@@ -19,12 +19,6 @@
 	__a<__b?__b:__a; \
 })
 
-void discard(void)
-{
-	endwin();
-	exit(0);
-}
-
 #include "textbase.h"
 
 #include "mode_normal.h"
@@ -40,6 +34,13 @@ int main(int argc, char **argv)
 {
 	initscr();
 
+	if(!has_colors())
+	{
+		printw("terminal doesn't support color");
+		endwin();
+		exit(0);
+	}
+
 	noecho();
 	// timeout(-1);
 	// cbreak();
@@ -51,18 +52,9 @@ int main(int argc, char **argv)
 	idcok(stdscr, 0);
 	/* Vaxeral was here. */
 
-	if(!has_colors())
-	{
-		printw("terminal doesn't support color, exiting...");
-		getch();
-		discard();
-	}
-
 	start_color();
 	init_pair(1, COLOR_RED, 0);
 	init_pair(2, COLOR_MAGENTA, 0);
-
-
 
 	Text tx = txcreate(3, 5, 0, 30, 10);
 	tx->mode = TXTYPEWRITER; 
@@ -75,7 +67,8 @@ int main(int argc, char **argv)
 	void tmp_discard(Text tx)
 	{
 		txfree(tx);
-		discard();
+		endwin();
+		exit(0);
 	}
 	txputmotion(tx, TXTYPEWRITER, 'q', tmp_discard);
 	
