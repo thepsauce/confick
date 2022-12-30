@@ -11,6 +11,7 @@ void txmotion_c_nl_indent(Text tx, int *px, int *py)
 	y = tx->curY;
 
 	// get spacing of current line	
+	sp = 0;
 	line = tx->lines + y;
 	for(len = line->len, buf = line->buf; len; len--, buf++)
 	{
