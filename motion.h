@@ -82,8 +82,6 @@ void txmotion_down(Text tx, int *px, int *py)
 	*py = y;
 }
 
-void _txdelete(Text tx, int x, int y); // implemented in text.h
-
 void txmotion_delete(Text tx, int *px, int *py)
 {
 	int x, y;

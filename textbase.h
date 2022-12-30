@@ -61,6 +61,6 @@ void _txinsertnstr(Line line, int index, const char *s, int n);
 // deletes character at given index coordinates
 void _txdelete(Text tx, int x, int y);
 // returns the end of the line of this raw string
-void _txlinesep(const char *s);
+const char *_txlinesep(const char *s);
 // returns the length of the line separator (\r, \n, \r\n)
-void _txlineseplen(const char *s);
+int _txlineseplen(const char *s);

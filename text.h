@@ -118,10 +118,6 @@ void txdraw(Text tx)
 		}
 		else
 		{
-			line = tx->lines + y;
-			buf = line->buf;
-			len = line->len;
-
 			snprintf(lnNBuf, sizeof lnNBuf, "%d", y + 1);
 			attron(COLOR_PAIR(1));
 			mvaddstr(i + tx->y, tx->x - 1 - strlen(lnNBuf), lnNBuf);
@@ -130,7 +126,8 @@ void txdraw(Text tx)
 			int x, y;
 			x = -tx->scrollX;
 			y = tx->y + i;
-			for(; len; len--, buf++)
+			line = tx->lines + y;
+			for(len = line->len, buf = line->buf; len; len--, buf++)
 			{
 				if(x >= 0 && !isspace(*buf))
 					mvaddch(y, tx->x + x, *buf);
@@ -190,7 +187,7 @@ void _txbreak(Text tx)
 	_txgrow(tx);
 	line = txline(tx);
 	nextLine = line + 1;	
-	memmove(nextLine, line, (tx->lineCnt - 1 - tx->curY) * sizeof*line);
+	memmove(nextLine, line, (tx->lineCnt - tx->curY) * sizeof*line);
 	if((breakLen = line->len - tx->curX))
 	{
 		nextLine->buf = malloc(breakLen);
@@ -274,7 +271,7 @@ void _txdelete(Text tx, int x, int y)
 			_txinsertnstr(line, line->len, nextLine->buf, nextLine->len);
 			free(nextLine->buf);
 			tx->lineCnt--;
-			memmove(nextLine, nextLine + 1, (tx->lineCnt - y) * sizeof*line);
+			memmove(nextLine, nextLine + 1, (tx->lineCnt - 1 - y) * sizeof*line);
 		}
 	}
 	else
