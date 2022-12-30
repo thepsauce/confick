@@ -78,6 +78,19 @@ void txmotion_down(Text tx)
 	txmove(tx, x, y);
 }
 
+void txmotion_end(Text tx)
+{
+	int x, y;
+
+	x = tx->curX;
+	y = tx->curY;
+	
+	x = _txviscurx(tx);
+	y = tx->lineCnt - 1;
+	x = _txshiftvisx(tx, x, y);
+	txmove(tx, x, y);
+}
+
 void txmotion_delete(Text tx)
 {
 	int x, y;

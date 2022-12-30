@@ -74,8 +74,9 @@ int main(int argc, char **argv)
 		{ KEY_DOWN, txmotion_down },
 		{ KEY_DC, txmotion_delete },
 		{ KEY_BACKSPACE, txmotion_backdelete },
-		{ KEY_HOME, txsave },
-		{ 'q', tmp_discard },
+		{ KEY_F(2), txsave },
+		{ KEY_F(1), tmp_discard },
+		{ KEY_END, txmotion_end }
 	};
 	struct {
 		int id;
