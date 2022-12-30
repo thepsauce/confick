@@ -31,6 +31,7 @@ void txmotion_c_nl_indent(Text tx, int *px, int *py)
 		memset(buf, '\t', tabs);
 		line = tx->lines + y;
 		_txinsertnstr(line, 0, buf, tabs);
+		x = tabs;
 	}
 
 	*px = x;

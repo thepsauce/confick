@@ -61,6 +61,23 @@ void txputmotion(Text tx, int mode, int id, void (*motion)(Text tx, int *x, int 
 	tx->motions[mode].cnt++;
 }
 
+int _txviscurx(Text tx)
+{
+	Line line;
+	char *buf;
+	int len;
+	int x = 0;
+	line = tx->lines + tx->curY;
+	for(buf = line->buf, len = tx->curX; len; len--, buf++)
+	{
+		if(*buf == '\t')
+			x += 4 - x % 4;
+		else
+			x++;
+	}
+	return x;
+}
+
 void txdraw(Text tx)
 {	
 	// this buffer holds the line number
@@ -110,16 +127,8 @@ void txdraw(Text tx)
 	for(int i = 0; i <= tx->width; i++)
 		mvaddch(tx->y + tx->height + 1, tx->x + i, '#');
 	// move ignores tabs, so we have to handle that
-	int curX = 0;
-	line = tx->lines + tx->curY;
-	for(buf = line->buf, len = tx->curX; len; len--, buf++)
-	{
-		if(*buf == '\t')
-			curX += 4 - curX % 4;
-		else
-			curX++;
-	}
-	move(tx->curY + tx->y - tx->scrollY, curX + tx->x - tx->scrollX);
+	int vx = _txviscurx(tx);
+	move(tx->y + tx->curY - tx->scrollY, tx->x + vx);
 
 }
 
@@ -131,7 +140,7 @@ void txmove(Text tx, int x, int y)
 	tx->curX = x;
 	tx->curY = y;
 	// make caret visible if it is outside
-	sx = x - tx->scrollX;
+	sx = _txviscurx(tx);
 	sy = y - tx->scrollY;
 	if(sx < 0)
 		tx->scrollX = max(x - 4, 0);
