@@ -44,6 +44,8 @@ void txclear(Text tx)
 		tx->lines = malloc(sizeof*tx->lines);
 		*tx->lines = tmp;
 	}
+	free(tx->fileName);
+	tx->fileName = NULL;
 }
 
 void txkey(Text tx, int key)
