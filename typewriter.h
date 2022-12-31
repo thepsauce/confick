@@ -80,29 +80,14 @@ void txmotion_down(Text tx)
 
 void txmotion_home(Text tx)
 {
-	int x, y;
-
-	x = tx->curX;
-	y = tx->curY;
-
-	x = _txviscurx(tx);
-	y = 0;
-	x = 0;
-	x = _txshiftvisx(tx, x, y);
-	txmove(tx, x, y);
+	txmove(tx, 0, 0);
 }
 
 void txmotion_end(Text tx)
 {
 	int x, y;
-
-	x = tx->curX;
-	y = tx->curY;
-	
-	x = _txviscurx(tx);
 	y = tx->lineCnt - 1;
 	x = tx->lines[y].len;
-	x = _txshiftvisx(tx, x, y);
 	txmove(tx, x, y);
 }
 
