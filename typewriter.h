@@ -90,7 +90,7 @@ void txmotion_home(Text tx)
 void txmotion_end(Text tx)
 {
 	int x, y;
-
+	
 	y = tx->lineCnt - 1;
 	x = tx->lines[y].len;
 	txmove(tx, x, y);
