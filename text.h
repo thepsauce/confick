@@ -134,14 +134,14 @@ void txdraw(Text tx)
 		if(y >= tx->lineCnt)
 		{
 			attron(COLOR_PAIR(2));
-			mvaddch(i, tx->x - 2, '~');
+			mvaddch(tx->y + i, tx->x - 2, '~');
 			attroff(COLOR_PAIR(2));
 		}
 		else
 		{
 			snprintf(lnNBuf, sizeof lnNBuf, "%d", y + 1);
 			attron(COLOR_PAIR(1));
-			mvaddstr(i + tx->y, tx->x - 1 - strlen(lnNBuf), lnNBuf);
+			mvaddstr(tx->y + i, tx->x - 1 - strlen(lnNBuf), lnNBuf);
 			attroff(COLOR_PAIR(1));
 			
 			visX = 0;
@@ -159,6 +159,10 @@ void txdraw(Text tx)
 			}
 		}
 	}
+	attron(COLOR_PAIR(3));
+	for(int i = -5; i <= tx->width; i++)
+		mvaddch(tx->y + tx->height + 1, tx->x + i, ' ');
+	attroff(COLOR_PAIR(3));
 }
 
 void txmove(Text tx, int x, int y)
