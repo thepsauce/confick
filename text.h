@@ -21,7 +21,7 @@ void txfree(Text tx)
 	for(int i = 0; i < tx->lineCnt; i++)
 		free(tx->lines[i].buf);
 	free(tx->lines);
-	for(int i = 0; i < sizeof(tx->motions) / sizeof(*tx->motions); i++)
+	for(int i = 0; i < (int) ARRLEN(tx->motions); i++)
 		free(tx->motions[i].elems);
 	free(tx->fileName);
 	free(tx);
@@ -158,13 +158,7 @@ void txdraw(Text tx)
 					break;
 			}
 		}
-		mvaddch(i + tx->y, tx->x + tx->width + 1, '#');
 	}
-	for(int i = 0; i <= tx->width; i++)
-		mvaddch(tx->y + tx->height + 1, tx->x + i, '#');
-	visX = _txviscurx(tx, tx->curX, tx->curY);
-	move(tx->y + tx->curY - tx->scrollY, tx->x + visX);
-	
 }
 
 void txmove(Text tx, int x, int y)
@@ -258,7 +252,6 @@ void txputc(Text tx, int c)
 	{
 		line = txline(tx);
 		_txinsertchar(line, tx->curX, c);
-		mvaddch(tx->curY + tx->y - tx->scrollY, tx->curX + tx->x - tx->scrollX, c);
 		tx->curX++;
 	}
 	// update cursor
@@ -325,9 +318,8 @@ void txputs(Text tx, const char *s)
 	while(1)
 	{
 		e = _txlinesep(s);
-		l = e ? e - s : strlen(s);
+		l = e ? (int) (e - s) : (int) strlen(s);
 		_txinsertnstr(txline(tx), tx->curX, s, l);
-		mvaddnstr(tx->curY + tx->x - tx->scrollY, tx->curX + tx->y - tx->scrollX, s, l);
 		tx->curX += l;
 		if(!e)
 			break;
