@@ -51,9 +51,9 @@ void txsave(Text tx);
 
 // these functions are incomplete, don't call them with out extra supporting structures
 // returns the index of the char under the given visible cursor X 
-int _txshiftvisx(Text tx, int visX, int indY);
+int _txshiftvisx(Text tx, int visX, int y);
 // returns the x coordinate of the visible cursor x
-int _txviscurx(Text tx);
+int _txviscurx(Text tx, int x, int y);
 // inserts a new line at the end of the text that is UNitialized
 void _txgrow(Text tx);
 // breaks the line at the cursor

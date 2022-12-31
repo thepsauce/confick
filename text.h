@@ -50,7 +50,6 @@ void txclear(Text tx)
 
 void txkey(Text tx, int key)
 {
-	int x, y;
 	for(int i = 0; i < tx->motions[tx->mode].cnt; i++)
 	{
 		if(tx->motions[tx->mode].elems[i].id == key)
@@ -82,7 +81,7 @@ void txputmotion(Text tx, int mode, int id, void (*motion)(Text tx))
 	tx->motions[mode].cnt++;
 }
 
-int _txshiftvisx(Text tx, int visX, int indY)
+int _txshiftvisx(Text tx, int visX, int y)
 {
 	Line line;
 	int len;
@@ -91,7 +90,7 @@ int _txshiftvisx(Text tx, int visX, int indY)
 
 	visX += tx->scrollX;
 	index = 0;
-	line = tx->lines + indY;
+	line = tx->lines + y;
 	for(len = line->len, buf = line->buf; index < visX && len; len--, buf++)
 	{
 		if(*buf == '\t')
@@ -102,21 +101,21 @@ int _txshiftvisx(Text tx, int visX, int indY)
 	return line->len - len;
 }
 
-int _txviscurx(Text tx)
+int _txviscurx(Text tx, int x, int y)
 {
 	Line line;
 	char *buf;
 	int len;
-	int x = 0;
-	line = tx->lines + tx->curY;
-	for(buf = line->buf, len = tx->curX; len; len--, buf++)
+	int visX = 0;
+	line = tx->lines + y;
+	for(buf = line->buf, len = x; len; len--, buf++)
 	{
 		if(*buf == '\t')
-			x += TXTABWIDTH - x % TXTABWIDTH;
+			visX += TXTABWIDTH - visX % TXTABWIDTH;
 		else
-			x++;
+			visX++;
 	}
-	return x - tx->scrollX;
+	return visX - tx->scrollX;
 }
 
 void txdraw(Text tx)
@@ -127,8 +126,6 @@ void txdraw(Text tx)
 	char *buf;
 	int len;
 	int y;
-	int visCh;
-	int index;
 	int visX;
 
 	for(int i = 0; i <= tx->height; i++)
@@ -147,17 +144,17 @@ void txdraw(Text tx)
 			mvaddstr(i + tx->y, tx->x - 1 - strlen(lnNBuf), lnNBuf);
 			attroff(COLOR_PAIR(1));
 			
-			index = -tx->scrollX;
+			visX = 0;
 			line = tx->lines + y;
 			for(len = line->len, buf = line->buf; len; len--, buf++)
 			{
-				if(index >= 0 && !isspace(*buf))
-					mvaddch(tx->y + i, tx->x + index, *buf);
+				if(visX >= tx->scrollX && !isspace(*buf))
+					mvaddch(tx->y + i, tx->x - tx->scrollX + visX, *buf);
 				if(*buf == '\t')
-					index += TXTABWIDTH - index % TXTABWIDTH;	
+					visX += TXTABWIDTH - visX % TXTABWIDTH;	
 				else
-					index++;
-				if(index > tx->width)
+					visX++;
+				if(visX - tx->scrollX > tx->width)
 					break;
 			}
 		}
@@ -165,9 +162,9 @@ void txdraw(Text tx)
 	}
 	for(int i = 0; i <= tx->width; i++)
 		mvaddch(tx->y + tx->height + 1, tx->x + i, '#');
-	visX = _txviscurx(tx);
+	visX = _txviscurx(tx, tx->curX, tx->curY);
 	move(tx->y + tx->curY - tx->scrollY, tx->x + visX);
-
+	
 }
 
 void txmove(Text tx, int x, int y)
@@ -178,7 +175,7 @@ void txmove(Text tx, int x, int y)
 	tx->curX = x;
 	tx->curY = y;
 	// make caret visible if it is outside
-	sx = _txviscurx(tx);
+	sx = _txviscurx(tx, x, y);
 	sy = y - tx->scrollY;
 	if(sx < 0)
 		tx->scrollX = max(sx + tx->scrollX - TXTABWIDTH, 0);

@@ -5,10 +5,10 @@ void txopen(Text tx, const char *fileName)
 
 	txclear(tx);
 	tx->fileName = strdup(fileName);
-    if(!(file = fopen(fileName, "r")))
-        return;
+	if(!(file = fopen(fileName, "r")))
+    	return;
 	while((c = fgetc(file)) != EOF)
-    {
+	{
         if(c == '\n')
         {
             _txgrow(tx);
