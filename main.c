@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 					tx->y = 0;
 					tx->width = w - 5 - 1;
 					tx->height = szY - 1 - 1;
-					x += w;
+					x += w + 1;
 				}
 			}
 			tx = *ptx;
@@ -184,15 +184,13 @@ int main(int argc, char **argv)
 		{ KEY_END, txspecialend },
 	};*/
 
-	txCnt = 3;
+	txCnt = 4;
 	txs = malloc(txCnt * sizeof*txs);
 	r = 0;
 	focus = 0;
-	txs[0] = txcreate(1, 0, 0, 0, 0);
-	txs[1] = txcreate(1, 0, 0, 0, 0);
-	txs[2] = txcreate(1, 0, 0, 0, 0);
 	for(int t = 0; t < txCnt; t++)
 	{
+		txs[t] = txcreate(1, 0, 0, 0, 0);
 		txs[t]->mode = TXTYPEWRITER; 
 		for(int i = 0; i < (int) ARRLEN(typewriterMotions); i++)
 			txputmotion(txs[t], TXTYPEWRITER, typewriterMotions[i].id, typewriterMotions[i].motion);
@@ -214,7 +212,7 @@ int main(int argc, char **argv)
 			int w = (szX - 1) / txCnt;
 			for(int t = 1; t < txCnt; t++)
 				for(int y = 0; y < szY; y++)
-					mvaddch(y, w * t, ' ');
+					mvaddch(y, w * t + t - 1, ' ');
 		}
 		attroff(A_DIM | COLOR_PAIR(3));
 		// draw cursor

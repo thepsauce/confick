@@ -120,8 +120,7 @@ int _txviscurx(Text tx, int x, int y)
 
 void txdraw(Text tx)
 {	
-	// this buffer holds the line number
-	char lnNBuf[(8 * sizeof(int) - 1) / 3 + 2];
+	char strBuf[512];
 	Line line;
 	char *buf;
 	int len;
@@ -139,9 +138,9 @@ void txdraw(Text tx)
 		}
 		else
 		{
-			snprintf(lnNBuf, sizeof lnNBuf, "%d", y + 1);
+			snprintf(strBuf, sizeof strBuf, "%d", y + 1);
 			attron(COLOR_PAIR(1));
-			mvaddstr(tx->y + i, tx->x - 1 - strlen(lnNBuf), lnNBuf);
+			mvaddstr(tx->y + i, tx->x - 1 - strlen(strBuf), strBuf);
 			attroff(COLOR_PAIR(1));
 			
 			visX = 0;
@@ -160,8 +159,11 @@ void txdraw(Text tx)
 		}
 	}
 	attron(COLOR_PAIR(3));
-	for(int i = -5; i <= tx->width; i++)
-		mvaddch(tx->y + tx->height + 1, tx->x + i, ' ');
+	snprintf(strBuf, sizeof strBuf, "%s:%d:%d", tx->fileName ? : "", tx->curY + 1, tx->curX + 1);
+	len = min((int) strlen(strBuf), tx->width + 5);
+	mvaddnstr(tx->y + tx->height + 1, tx->x - 5, strBuf, len);
+	for(int i = len; i <= tx->width + 5; i++)
+		addch(' ');
 	attroff(COLOR_PAIR(3));
 }
 
