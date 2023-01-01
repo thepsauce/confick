@@ -39,6 +39,7 @@ typedef struct text {
 Text txcreate(int initLineCap, int x, int y, int width, int height);
 void txfree(Text text);
 void txclear(Text tx);
+void txdraw(Text tx);
 void txmove(Text tx, int x, int y);
 void txdelc(Text tx);
 void txputc(Text text, int c);
@@ -73,3 +74,12 @@ int _txlineseplen(const char *s);
 // gets the number of spaces in front of a line
 int _txunitspacing(Text tx, int y);
 
+// text manager
+void txmgrdiscard(void);
+void txmgrupdate(int szX, int szY);
+void txmgrdraw(void);
+void txmgradd(Text tx);
+void txmgrremove(Text tx);
+Text txmgrgetfocus(void);
+void txmgrfocusnext(void);
+void txmgrrotate(void);
