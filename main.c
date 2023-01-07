@@ -90,9 +90,9 @@ int main(int argc, char **argv)
 	wdgaddclass(wc);
 
 	struct motion consoleMotions[] = {
-		{ WDGDRAW, (motionproc) txinit },
-		{ WDGINIT, (motionproc) txuninit },
-		{ WDGUNINIT, (motionproc) csdraw },
+		{ WDGINIT, (motionproc) txinit },
+		{ WDGUNINIT, (motionproc) txuninit },
+		{ WDGDRAW, (motionproc) csdraw },
 		{ KEY_LEFT, (motionproc) csleft },
 		{ KEY_UP, (motionproc) csup },
 		{ KEY_RIGHT, (motionproc) csright },
