@@ -21,20 +21,19 @@
 	__a<__b?__b:__a; \
 })
 
-#include "textbase.h"
+#include "wdg/wdgbase.h"
 
-#include "txmgr.h"
-#include "mode_normal.h"
-#include "typewriter.h"
-#include "text.h"
-#include "io.h"
+#include "wdg/wdg.h"
+
+#include "wdgmgr.h"
+#include "wdg/console.h"
+#include "wdg/text.h"
 
 int main(int argc, char **argv)
 {
-	MEVENT me;
-	int c;
+	Widget wdg;	
 	int szX, szY;
-	Text tx;	
+	int c;
 
 	initscr();
 
@@ -51,7 +50,7 @@ int main(int argc, char **argv)
 	raw();
 	mouseinterval(0);
 	keypad(stdscr, 1);
-	mousemask(ALL_MOUSE_EVENTS, NULL);
+	//mousemask(ALL_MOUSE_EVENTS, NULL);
 	idlok(stdscr, 0);
 	idcok(stdscr, 0);
 	/* Vaxeral was here. */
@@ -59,97 +58,95 @@ int main(int argc, char **argv)
 	start_color();
 	init_pair(1, COLOR_RED, 0);
 	init_pair(2, COLOR_MAGENTA, 0);
-	init_pair(3, 0, COLOR_WHITE);
+	init_pair(3, COLOR_BLACK, COLOR_WHITE);
 
-	void tmp_discard(Text tx)
+	Widgetclass wc;
+	void tmp_close(Widget wdg)
 	{
-		(void) tx;
-		txmgrdiscard();
+		wdgmgrremove(wdg);
+		wdgfree(wdg);
 	}
-	void tmp_rotate(Text tx)
-	{
-		(void) tx;
-		txmgrrotate();
-	}
-	void tmp_switch(Text tx)
-	{
-		(void) tx;
-		txmgrfocusnext();
-	}
-	void tmp_close(Text tx)
-	{
-		txremove(tx);
-		txfree(tx);
-	}
-	struct {
-		int id;
-		void (*motion)(Text tx);
-	} typewriterMotions[] = {
-		{ KEY_UP, txmotion_up },
-		{ KEY_LEFT, txmotion_left },
-		{ KEY_RIGHT, txmotion_right },
-		{ KEY_DOWN, txmotion_down },
-		{ KEY_DC, txmotion_delete },
-		{ KEY_BACKSPACE, txmotion_backdelete },
-		{ KEY_F(2), txsave },
-		{ 'q' - ('a' - 1), tmp_discard },
-		{ 'w' - ('a' - 1), tmp_close },
-		{ KEY_END, txmotion_end },
-		{ KEY_HOME, txmotion_home },
-		{ 'f' - ('a' - 1), tmp_switch },
-		{ 'r' - ('a' - 1), tmp_rotate },
+	struct motion txMotions[] = {
+		{ WDGINIT, (motionproc) txinit },
+		{ WDGUNINIT, (motionproc) txuninit },
+		{ WDGDRAW, (motionproc) txdraw },
+		{ KEY_LEFT, (motionproc) txleft },
+		{ KEY_UP, (motionproc) txup },
+		{ KEY_RIGHT, (motionproc) txright },
+		{ KEY_DOWN, (motionproc) txdown },
+		{ KEY_DC, (motionproc) txdelete },
+		{ KEY_BACKSPACE, (motionproc) txbackdelete },
+		{ KEY_F(2), (motionproc) txsave },
+		{ 'w' - ('a' - 1), (motionproc) tmp_close },
+		{ KEY_END, (motionproc) txend },
+		{ KEY_HOME, (motionproc) txhome },
 	};
-	struct {
-		int id;
-		void (*motion)(Text tx);
-	} normalMotions[] = {
-		{ '\n', txmotion_c_nl_indent },
-		{ '}', txmotion_c_curlyclose },
-		{ 'i', txmotion_c_if }
-	};/*
-	struct {
-		int id;
-		void (*motion)(Text tx);
-	} specialMotions[] = {
-		{ KEY_UP, txspecialup },
-		{ KEY_LEFT, txspecialleft },
-		{ KEY_RIGHT, txspecialright },
-		{ KEY_DOWN, txspecialdown },
-		{ KEY_HOME, txspecialhome },
-		{ KEY_END, txspecialend },
-	};*/
+	wc = malloc((sizeof*wc) + (sizeof txMotions));
+	wc->name = strdup("Text");
+	wc->size = sizeof(struct text);
+	wc->proc = (eventproc) txevent;
+	wc->motionCnt = ARRLEN(txMotions);
+	memcpy(wc->motions, txMotions, sizeof txMotions);
+	wdgaddclass(wc);
 
-	for(int t = 0; t < argc - 1; t++)
+	struct motion consoleMotions[] = {
+		{ WDGDRAW, (motionproc) txinit },
+		{ WDGINIT, (motionproc) txuninit },
+		{ WDGUNINIT, (motionproc) csdraw },
+		{ KEY_LEFT, (motionproc) csleft },
+		{ KEY_UP, (motionproc) csup },
+		{ KEY_RIGHT, (motionproc) csright },
+		{ KEY_DOWN, (motionproc) csdown },
+		{ KEY_HOME, (motionproc) cshome },
+		{ KEY_END, (motionproc) csend },
+		{ KEY_DC, (motionproc) csdelete },
+		{ KEY_BACKSPACE, (motionproc) csbackdelete },
+	};
+	wc = malloc((sizeof*wc) + (sizeof consoleMotions));
+	wc->name = strdup("Console");
+	wc->size = sizeof(struct console);
+	wc->proc = (eventproc) csevent;
+	wc->motionCnt = ARRLEN(consoleMotions);
+	memcpy(wc->motions, consoleMotions, sizeof consoleMotions);
+	wdgaddclass(wc);
+
+	for(int t = 1; t < argc; t++)
 	{
-		tx = txcreate(1, 0, 0, 0, 0);
-		tx->mode = TXTYPEWRITER; 
-		for(int i = 0; i < (int) ARRLEN(typewriterMotions); i++)
-			txputmotion(tx, TXTYPEWRITER, typewriterMotions[i].id, typewriterMotions[i].motion);
-		for(int i = 0; i < (int) ARRLEN(normalMotions); i++)
-			txputmotion(tx, TXNORMAL, normalMotions[i].id, normalMotions[i].motion);
-		txopen(tx, argv[t + 1]);
-		txmgradd(tx);
+		wdg = wdgcreate("Text");
+		txopen((TextWidget) wdg, argv[t]);
+		wdgmgradd(wdg);
 	}
 	if(argc == 1)
 	{
-		tx = txcreate(1, 0, 0, 0, 0);
-		tx->mode = TXTYPEWRITER; 
-		for(int i = 0; i < (int) ARRLEN(typewriterMotions); i++)
-			txputmotion(tx, TXTYPEWRITER, typewriterMotions[i].id, typewriterMotions[i].motion);
-		for(int i = 0; i < (int) ARRLEN(normalMotions); i++)
-			txputmotion(tx, TXNORMAL, normalMotions[i].id, normalMotions[i].motion);
-		txmgradd(tx);
+		wdg = wdgcreate("Text");
+		wdgmgradd(wdg);
 	}
+	
+	wdg = wdgcreate("Console");
+	wdgmgradd(wdg);
+
 	do
 	{
 		getmaxyx(stdscr, szY, szX);
-		txmgrupdate(szX, szY);
+		wdgmgrupdate(szX, szY);
 		erase();
-		txmgrdraw();
+		wdgmgrdraw();
 		refresh();
 		c = getch();
-		if((tx = txmgrgetfocus()))
-			txkey(tx, c);
+		switch(c)
+		{
+		case 'f' - ('a' - 1):
+			wdgmgrfocusnext();		
+			break;
+		case 'r' - ('a' - 1):
+			wdgmgrrotate();		
+			break;
+		case 'q' - ('a' - 1):
+			wdgmgrdiscard();		
+			break;
+		}
+		if((wdg = wdgmgrgetfocus()))
+			wdgevent(wdg, c);
 	} while(1);
 	return 0;
 }

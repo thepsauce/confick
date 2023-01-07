@@ -1,87 +1,43 @@
-Text txcreate(int initLineCap, int x, int y, int width, int height)
+TextWidget txinit(TextWidget tx)
 {
-	Text tx;
-
-	tx = malloc(sizeof*tx);
-	memset(tx, 0, sizeof*tx);
-	tx->x = x;
-	tx->y = y;
-	tx->width = width;
-	tx->height = height;
-	initLineCap = initLineCap < 1 ? 1 : initLineCap;
-	tx->lines = malloc(initLineCap * sizeof*tx->lines);
-	tx->lineCap = initLineCap;
+	tx->lines = malloc(sizeof*tx->lines);
+	tx->lineCap = 1;
 	tx->lineCnt = 1;
 	memset(tx->lines, 0, sizeof*tx->lines);
 	return tx;
 }
 
-void txfree(Text tx)
+void txuninit(TextWidget tx)
 {
 	for(int i = 0; i < tx->lineCnt; i++)
 		free(tx->lines[i].buf);
 	free(tx->lines);
-	for(int i = 0; i < (int) ARRLEN(tx->motions); i++)
-		free(tx->motions[i].elems);
 	free(tx->fileName);
-	free(tx);
 }
 
-void txclear(Text tx)
+void txclear(TextWidget tx)
 {
 	tx->lines[0].len = 0;
 	for(int i = 1; i < tx->lineCnt; i++)
 		free(tx->lines[i].buf);
-	tx->curX = 0;
-	tx->curY = 0;
-	tx->scrollX = 0;
-	tx->scrollY = 0;
 	tx->lineCnt = 1;
 	if(tx->lineCap > TXCLEARKEEPTHRESHOLD)
 	{
 		struct line tmp = *tx->lines;
 		free(tx->lines);
 		tx->lines = malloc(sizeof*tx->lines);
+		tx->lineCap = 1;
 		*tx->lines = tmp;
 	}
+	tx->curX = 0;
+	tx->curY = 0;
+	tx->scrollX = 0;
+	tx->scrollY = 0;
 	free(tx->fileName);
 	tx->fileName = NULL;
 }
 
-void txkey(Text tx, int key)
-{
-	for(int i = 0; i < tx->motions[tx->mode].cnt; i++)
-	{
-		if(tx->motions[tx->mode].elems[i].id == key)
-		{
-			tx->motions[tx->mode].elems[i].motion(tx);
-			return;
-		}
-	}
-	if(key <= 255)
-		txputc(tx, key);
-}
-
-void txputmotion(Text tx, int mode, int id, void (*motion)(Text tx))
-{
-	for(int i = 0; i < tx->motions[mode].cnt; i++)
-		if(tx->motions[mode].elems[i].id == id)
-		{
-			tx->motions[mode].elems[i].motion = motion;
-			return;
-		}
-	if(tx->motions[mode].cnt + 1 > tx->motions[mode].cap)
-	{
-		tx->motions[mode].cap *= 2;
-		tx->motions[mode].cap++;
-		tx->motions[mode].elems = realloc(tx->motions[mode].elems, tx->motions[mode].cap * sizeof *tx->motions[mode].elems);
-	}
-	tx->motions[mode].elems[tx->motions[mode].cnt].id = id;
-	tx->motions[mode].elems[tx->motions[mode].cnt].motion = motion;
-	tx->motions[mode].cnt++;
-}
-
-int _txshiftvisx(Text tx, int visX, int y)
+int _txshiftvisx(TextWidget tx, int visX, int y)
 {
 	Line line;
 	int len;
@@ -101,7 +57,7 @@ int _txshiftvisx(Text tx, int visX, int y)
 	return line->len - len;
 }
 
-int _txviscurx(Text tx, int x, int y)
+int _txviscurx(TextWidget tx, int x, int y)
 {
 	Line line;
 	char *buf;
@@ -118,7 +74,34 @@ int _txviscurx(Text tx, int x, int y)
 	return visX - tx->scrollX;
 }
 
-void txdraw(Text tx)
+void txmove(TextWidget tx, int x, int y)
+{
+	int sx, sy; // scrolled x and y
+
+	assert(x >= 0 && y >= 0 && y < tx->lineCnt && x <= tx->lines[y].len && "txmove > out of bounds");
+	tx->curX = x;
+	tx->curY = y;
+	// make caret visible if it is outside
+	sx = _txviscurx(tx, x, y);
+	sy = y - tx->scrollY;
+	if(sx < 0)
+		tx->scrollX = max(sx + tx->scrollX - TXTABWIDTH, 0);
+	else if(sx > tx->width)
+		tx->scrollX = sx + tx->scrollX - tx->width + TXTABWIDTH;
+	// same for y
+	if(sy < 0)
+		tx->scrollY = y;
+	else if(sy > tx->height)
+		tx->scrollY = y - tx->height;
+}
+
+void txevent(TextWidget tx, int eId)
+{
+	if(eId <= 255)
+		txputc(tx, eId);
+}
+
+void txdraw(TextWidget tx)
 {	
 	char strBuf[512];
 	Line line;
@@ -126,6 +109,7 @@ void txdraw(Text tx)
 	int len;
 	int y;
 	int visX;
+	int a;
 
 	for(int i = 0; i <= tx->height; i++)
 	{
@@ -158,37 +142,19 @@ void txdraw(Text tx)
 			}
 		}
 	}
-	attron(COLOR_PAIR(3));
+	a = COLOR_PAIR(3);
+	if(wdgmgrgetfocus() == (Widget) tx)
+		a |= A_BOLD;
+	attron(a);
 	snprintf(strBuf, sizeof strBuf, "%s:%d:%d", tx->fileName ? : "", tx->curY + 1, tx->curX + 1);
 	len = min((int) strlen(strBuf), tx->width + 5);
 	mvaddnstr(tx->y + tx->height + 1, tx->x - 5, strBuf, len);
 	for(int i = len; i <= tx->width + 5; i++)
 		addch(' ');
-	attroff(COLOR_PAIR(3));
+	attroff(a);
 }
 
-void txmove(Text tx, int x, int y)
-{
-	int sx, sy; // scrolled x and y
-
-	assert(x >= 0 && y >= 0 && y < tx->lineCnt && x <= tx->lines[y].len && "txmove > out of bounds");
-	tx->curX = x;
-	tx->curY = y;
-	// make caret visible if it is outside
-	sx = _txviscurx(tx, x, y);
-	sy = y - tx->scrollY;
-	if(sx < 0)
-		tx->scrollX = max(sx + tx->scrollX - TXTABWIDTH, 0);
-	else if(sx > tx->width)
-		tx->scrollX = sx + tx->scrollX - tx->width + TXTABWIDTH;
-	// same for y
-	if(sy < 0)
-		tx->scrollY = y;
-	else if(sy > tx->height)
-		tx->scrollY = y - tx->height;
-}
-
-void _txgrow(Text tx)
+void _txgrow(TextWidget tx)
 {
 	if(tx->lineCnt + 1 > tx->lineCap)
 	{
@@ -198,13 +164,13 @@ void _txgrow(Text tx)
 	}
 }
 
-void _txbreak(Text tx)
+void txbreak(TextWidget tx)
 {
 	Line line, nextLine;
 	int breakLen;
 	
 	_txgrow(tx);
-	line = txline(tx);
+	line = tx->lines + tx->curY;
 	nextLine = line + 1;	
 	memmove(nextLine, line, (tx->lineCnt - tx->curY) * sizeof*line);
 	if((breakLen = line->len - tx->curX))
@@ -246,13 +212,13 @@ void _txinsertchar(Line line, int index, int c)
 	*dest = c;
 }
 
-void txputc(Text tx, int c)
+void txputc(TextWidget tx, int c)
 {
 	Line line;
 
 	if(c == '\r' || c == '\n')
 	{
-		_txbreak(tx);
+		txbreak(tx);
 	}
 	else
 	{
@@ -275,7 +241,7 @@ void _txinsertnstr(Line line, int index, const char *s, int n)
 	memcpy(dest, s, n);
 }
 
-void _txdelete(Text tx, int x, int y)
+void _txdelete(TextWidget tx, int x, int y)
 {
 	Line line;
 
@@ -316,7 +282,7 @@ int _txlineseplen(const char *s)
 	return 1 + (s[0] == '\r' && s[1] == '\n');
 }
 
-void txputs(Text tx, const char *s)
+void txputs(TextWidget tx, const char *s)
 {
 	const char *e;
 	int l;
@@ -329,9 +295,190 @@ void txputs(Text tx, const char *s)
 		tx->curX += l;
 		if(!e)
 			break;
-		_txbreak(tx);
+		txbreak(tx);
 		s = e + _txlineseplen(e);
 	}
 	// update cursor
 	txmove(tx, tx->curX, tx->curY);
+}
+
+
+void txup(TextWidget tx)
+{
+	int x, y;
+
+	x = tx->curX;
+	y = tx->curY;
+
+	if(y)
+	{
+		x = _txviscurx(tx, x, y);
+		y--;
+		x = _txshiftvisx(tx, x, y);
+	}
+
+	txmove(tx, x, y);
+}
+
+void txleft(TextWidget tx)
+{
+	int x, y;
+
+	x = tx->curX;
+	y = tx->curY;
+
+	if(!x)
+	{
+		if(y)
+		{
+			y--;
+			x = tx->lines[y].len;
+		}
+	}
+	else 
+	{
+		x--;
+	}
+
+	txmove(tx, x, y);
+}
+
+void txright(TextWidget tx)
+{
+	int x, y;
+
+	x = tx->curX;
+	y = tx->curY;
+
+	if(x == tx->lines[y].len)
+	{
+		if(y + 1 != tx->lineCnt)
+		{
+			y++;
+			x = 0;
+		}
+	}
+	else
+	{
+		x++;
+	}
+
+	txmove(tx, x, y);
+}
+
+void txdown(TextWidget tx)
+{
+	int x, y;
+
+	x = tx->curX;
+	y = tx->curY;
+
+	if(y + 1 != tx->lineCnt)
+	{
+		x = _txviscurx(tx, x, y);
+		y++;
+		x = _txshiftvisx(tx, x, y);
+	}
+
+	txmove(tx, x, y);
+}
+
+void txhome(TextWidget tx)
+{
+	int x, y;
+
+	y = 0;
+	x = 0;
+	txmove(tx, x, y);
+}
+
+void txend(TextWidget tx)
+{
+	int x, y;
+	
+	y = tx->lineCnt - 1;
+	x = tx->lines[y].len;
+	txmove(tx, x, y);
+}
+
+void txdelete(TextWidget tx)
+{
+	int x, y;
+
+	x = tx->curX;
+    y = tx->curY;
+
+	// only delete if the cursor is not at the end of the text
+	if(y + 1 != tx->lineCnt || x != tx->lines[y].len)
+		_txdelete(tx, x, y);	
+
+	txmove(tx, x, y);
+}
+
+void txbackdelete(TextWidget tx)
+{
+	int x, y;
+
+	x = tx->curX;
+    y = tx->curY;
+
+	if(!x)
+	{
+		if(y)
+		{
+			y--;
+			x = tx->lines[y].len;
+		}
+		else
+		{
+			// nothing to delete
+			goto no_delete;
+		}
+	}
+	else
+	{
+		x--;
+	}
+	_txdelete(tx, x, y);
+no_delete:
+	txmove(tx, x, y);
+}
+
+void txopen(TextWidget tx, const char *fileName)
+{
+	FILE *file;
+	int c;
+
+	txclear(tx);
+	tx->fileName = strdup(fileName);
+	if(!(file = fopen(fileName, "r")))
+    	return;
+	while((c = fgetc(file)) != EOF)
+	{
+        if(c == '\n')
+        {
+            _txgrow(tx);
+            memset(&tx->lines[tx->lineCnt++], 0, sizeof*tx->lines);
+        }
+		else
+		{
+            _txinsertchar(&tx->lines[tx->lineCnt - 1], tx->lines[tx->lineCnt - 1].len, c);
+    	}
+	}
+    fclose(file);
+}
+
+void txsave(TextWidget tx)
+{
+	FILE *file;
+
+    file = fopen(tx->fileName, "w");
+    assert(file);
+	fwrite(tx->lines->buf, 1, tx->lines->len, file);
+    for(int i = 1; i < tx->lineCnt; i++)
+    {
+        fputc('\n', file);
+        fwrite(tx->lines[i].buf, 1, tx->lines[i].len, file);
+    }
+    fclose(file);
 }
