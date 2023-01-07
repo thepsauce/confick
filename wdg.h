@@ -32,9 +32,24 @@ Widget wdgcreate(const char *clsName)
 	Widgetclass wc;
 	Widget wdg;
 
-	wc = wdgfindclass(clsName);
-	if(!wc)
-		return NULL;
+	if(!clsName)
+	{
+		if(!(wc = wdgfindclass("#NULLCLASS")))
+		{
+			wc = malloc(sizeof*wc);
+			wc->name = strdup("#NULLCLASS");
+			wc->size = sizeof(struct widget);
+			wc->proc = NULL;
+			wc->motionCnt = 0;
+			wdgaddclass(wc);
+		}
+	}
+	else
+	{
+		wc = wdgfindclass(clsName);
+		if(!wc)
+			return NULL;
+	}
 	wdg = malloc(wc->size);
 	memset(wdg, 0, wc->size);
 	wdg->wc = wc;

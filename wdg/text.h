@@ -103,6 +103,7 @@ void txevent(TextWidget tx, int eId)
 
 void txdraw(TextWidget tx)
 {	
+	int offX, offY;
 	char strBuf[512];
 	Line line;
 	char *buf;
@@ -110,6 +111,9 @@ void txdraw(TextWidget tx)
 	int y;
 	int visX;
 	int a;
+
+	offX = tx->x;
+	offY = tx->y;
 
 	for(int i = 0; i <= tx->height; i++)
 	{
@@ -152,6 +156,14 @@ void txdraw(TextWidget tx)
 	for(int i = len; i <= tx->width + 5; i++)
 		addch(' ');
 	attroff(a);
+}
+
+void txdrawcursor(TextWidget tx)
+{
+	int visX;
+
+	visX = _txviscurx(tx, tx->curX, tx->curY);
+	move(tx->y + tx->curY - tx->scrollY, tx->x + visX);
 }
 
 void _txgrow(TextWidget tx)
@@ -214,16 +226,13 @@ void _txinsertchar(Line line, int index, int c)
 
 void txputc(TextWidget tx, int c)
 {
-	Line line;
-
 	if(c == '\r' || c == '\n')
 	{
 		txbreak(tx);
 	}
 	else
 	{
-		line = txline(tx);
-		_txinsertchar(line, tx->curX, c);
+		_txinsertchar(tx->lines + tx->curY, tx->curX, c);
 		tx->curX++;
 	}
 	// update cursor
@@ -291,7 +300,7 @@ void txputs(TextWidget tx, const char *s)
 	{
 		e = _txlinesep(s);
 		l = e ? (int) (e - s) : (int) strlen(s);
-		_txinsertnstr(txline(tx), tx->curX, s, l);
+		_txinsertnstr(tx->lines + tx->curY, tx->curX, s, l);
 		tx->curX += l;
 		if(!e)
 			break;

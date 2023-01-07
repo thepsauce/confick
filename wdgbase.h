@@ -1,4 +1,5 @@
 struct widget;
+struct widgetcontainer;
 
 typedef union eventinfo {
 	MEVENT mouse;
@@ -26,8 +27,8 @@ Widgetclass wdgfindclass(const char *name);
 
 #define _WIDGET_HEADER Widgetclass wc; \
 	int flags; \
-	int x, y; \
-	int width, height \
+	int x, y, width, height; \
+	struct widget *parent, *prev, *next, *child
 
 typedef struct widget {
 	_WIDGET_HEADER;
@@ -39,7 +40,8 @@ void wdgclear(Widget wdg);
 #define WDGINIT (-1)
 #define WDGUNINIT (-2)
 #define WDGDRAW (-3)
-#define WDGDEFAULT (-4)
+#define WDGCURSORDRAW (-4)
+#define WDGDEFAULT (-5)
 void wdgevent(Widget wdg, int eId);
 
 // widget manager
@@ -92,9 +94,10 @@ void txmove(TextWidget tx, int x, int y);
 void txdelc(TextWidget tx);
 void txputc(TextWidget text, int c);
 void txputs(TextWidget text, const char *s);
-#define txline(t) ((t)->lines+(t)->curY)
 void txopen(TextWidget tx, const char *fileName);
 void txsave(TextWidget tx);
+// breaks the line at the cursor
+void txbreak(TextWidget tx);
 
 // these functions are incomplete, don't call them with out extra supporting structures
 // returns the index of the char under the given visible cursor X 
@@ -103,8 +106,6 @@ int _txshiftvisx(TextWidget tx, int visX, int y);
 int _txviscurx(TextWidget tx, int x, int y);
 // inserts a new line at the end of the text that is UNitialized
 void _txgrow(TextWidget tx);
-// breaks the line at the cursor
-void _txbreak(TextWidget tx);
 // sets the line capacity to cap
 void _txgrowline(Line line, int to);
 // inserts a char at given index

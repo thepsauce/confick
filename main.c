@@ -21,17 +21,16 @@
 	__a<__b?__b:__a; \
 })
 
-#include "wdg/wdgbase.h"
+#include "wdgbase.h"
 
-#include "wdg/wdg.h"
-
+#include "wdg.h"
 #include "wdgmgr.h"
 #include "wdg/console.h"
 #include "wdg/text.h"
 
 int main(int argc, char **argv)
 {
-	Widget wdg;	
+	Widget wdg, parent;
 	int szX, szY;
 	int c;
 
@@ -63,13 +62,14 @@ int main(int argc, char **argv)
 	Widgetclass wc;
 	void tmp_close(Widget wdg)
 	{
-		wdgmgrremove(wdg);
+		// wdgmgrremove(wdg);
 		wdgfree(wdg);
 	}
 	struct motion txMotions[] = {
 		{ WDGINIT, (motionproc) txinit },
 		{ WDGUNINIT, (motionproc) txuninit },
 		{ WDGDRAW, (motionproc) txdraw },
+		{ WDGCURSORDRAW, (motionproc) txdrawcursor },
 		{ KEY_LEFT, (motionproc) txleft },
 		{ KEY_UP, (motionproc) txup },
 		{ KEY_RIGHT, (motionproc) txright },
@@ -93,6 +93,7 @@ int main(int argc, char **argv)
 		{ WDGINIT, (motionproc) txinit },
 		{ WDGUNINIT, (motionproc) txuninit },
 		{ WDGDRAW, (motionproc) csdraw },
+		{ WDGCURSORDRAW, (motionproc) txdrawcursor },
 		{ KEY_LEFT, (motionproc) csleft },
 		{ KEY_UP, (motionproc) csup },
 		{ KEY_RIGHT, (motionproc) csright },
@@ -101,6 +102,7 @@ int main(int argc, char **argv)
 		{ KEY_END, (motionproc) csend },
 		{ KEY_DC, (motionproc) csdelete },
 		{ KEY_BACKSPACE, (motionproc) csbackdelete },
+		{ '\n', (motionproc) csenter },
 	};
 	wc = malloc((sizeof*wc) + (sizeof consoleMotions));
 	wc->name = strdup("Console");
@@ -110,20 +112,23 @@ int main(int argc, char **argv)
 	memcpy(wc->motions, consoleMotions, sizeof consoleMotions);
 	wdgaddclass(wc);
 
+	parent = wdgcreate(NULL);
 	for(int t = 1; t < argc; t++)
 	{
 		wdg = wdgcreate("Text");
 		txopen((TextWidget) wdg, argv[t]);
-		wdgmgradd(wdg);
+		wdgattach(wdg, parent);
 	}
 	if(argc == 1)
 	{
 		wdg = wdgcreate("Text");
-		wdgmgradd(wdg);
+		wdgattach(wdg, parent);
 	}
-	
+
+	wdgattach(parent, NULL);
+
 	wdg = wdgcreate("Console");
-	wdgmgradd(wdg);
+	wdgattach(wdg, NULL);
 
 	do
 	{
@@ -136,10 +141,16 @@ int main(int argc, char **argv)
 		switch(c)
 		{
 		case 'f' - ('a' - 1):
-			wdgmgrfocusnext();		
+			if(Focus->next)
+				Focus = Focus->next;
+			else
+			{
+				while(Focus->prev)
+					Focus = Focus->prev;
+			}
 			break;
 		case 'r' - ('a' - 1):
-			wdgmgrrotate();		
+			//wdgmgrrotate();		
 			break;
 		case 'q' - ('a' - 1):
 			wdgmgrdiscard();		
