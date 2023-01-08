@@ -1,12 +1,11 @@
 Widget FirstWidget;
-Widget *Widgets;
-int WidgetCnt, WidgetCap;
 Widget Focus;
 int SizeX, SizeY;
 
 void wdgattach(Widget wdg, Widget parent)
 {
 	Widget last;
+	struct focusnode *node;
 	
 	wdg->parent = parent;
 	if(!parent)
@@ -26,18 +25,18 @@ void wdgattach(Widget wdg, Widget parent)
 			parent->child = wdg;
 		else
 		{
-			for(last = FirstWidget; last->next; last = last->next);
+			for(last = parent->child; last->next; last = last->next);
 			wdg->prev = last;
 			last->next = wdg;
 		}
 	}
-	if(WidgetCnt + 1 > WidgetCap)
+	if(wdg->wc->name[0] == '#')
+		return;
+	if(Focus)
 	{
-		WidgetCap *= 2;
-		WidgetCap++;
-		Widgets = realloc(Widgets, WidgetCap * sizeof*Widgets);
+		wdg->nextFocus = Focus;
+		Focus->prevFocus = wdg;
 	}
-	Widgets[WidgetCnt++] = wdg;
 	Focus = wdg;
 }
 
@@ -55,15 +54,16 @@ void wdgdetach(Widget wdg)
 		wdg->next->prev = wdg->prev;
 }
 
-void _wdgmgrrelayout(Widget cont, int minX, int minY, int maxWidth, int maxHeight)
+void _wdgmgrrelayout(Widget wdg, int minX, int minY, int maxWidth, int maxHeight)
 {
 	int x, y, w, h;
 	int cnt;
 	int dir;
 	Widget first, next;
+	struct insets insets;
 	int layout;
 
-	if(!cont)
+	if(!wdg)
 	{
 		if(!FirstWidget)
 			return;
@@ -72,51 +72,52 @@ void _wdgmgrrelayout(Widget cont, int minX, int minY, int maxWidth, int maxHeigh
 	}
 	else
 	{
-		cont->x = minX;
-		cont->y = minY;
-		cont->width = maxWidth;
-		cont->height = maxHeight;
-		if(!cont->child)
+		insets = wdg->wc->insets;
+		wdg->x = minX + insets.left;
+		wdg->y = minY + insets.top;
+		wdg->width = maxWidth - insets.left - insets.right;
+		wdg->height = maxHeight - insets.top - insets.bottom;
+		if(!wdg->child)
 			return;
-		first = cont->child;
+		first = wdg->child;
 		layout = 0;
 	}
 	// get number of children
-	for(cnt = 1, cont = first; cont->next; cnt++, cont = cont->next);
+	for(cnt = 1, wdg = first; wdg->next; cnt++, wdg = wdg->next);
 	dir = -1;
 	switch(layout)
 	{
 	case 0:
 		dir = 1;
-		cont = first;
+		wdg = first;
 	case 2:
 		x = minX;
 		w = maxWidth / cnt;
 		if(w > 5)
 		{
-			for(; --cnt; cont = dir < 0 ? cont->prev : cont->next)
+			for(; --cnt; wdg = dir < 0 ? wdg->prev : wdg->next)
 			{
-				_wdgmgrrelayout(cont, x + 5, minY, w - 5, maxHeight - 1);
+				_wdgmgrrelayout(wdg, x, minY, w - 1, maxHeight);
 				x += w + 1;
 			}
 		}
-		_wdgmgrrelayout(cont, x + 5, 0, maxWidth - (x + 5), maxHeight - 1);
+		_wdgmgrrelayout(wdg, x, minY, maxWidth - x, maxHeight);
 		break;
 	case 1:
 		dir = 1;
-		cont = first;
+		wdg = first;
 	case 3:
 		y = minY;
 		h = maxHeight / cnt;
 		if(h > 1)
 		{
-			for(; --cnt; cont = dir < 0 ? cont->prev : cont->next)
+			for(; --cnt; wdg = dir < 0 ? wdg->prev : wdg->next)
 			{
-				_wdgmgrrelayout(cont, minX + 5, y, maxWidth - 5, h);
+				_wdgmgrrelayout(wdg, minX, y, maxWidth, h);
 				y += h + 1;
 			}
 		}
-		_wdgmgrrelayout(cont, minX + 5, y, maxWidth - 5, maxHeight - y);
+		_wdgmgrrelayout(wdg, minX, y, maxWidth, maxHeight - y);
 		break;
 	}
 }
@@ -136,24 +137,30 @@ void wdgmgrdiscard(void)
 	exit(0);
 }
 
+void wdgdraw(Widget wdg)
+{
+	Widget child;
+	int cnt;
+
+again:
+	wdgevent(wdg, WDGDRAW);
+	for(child = wdg->child; child; child = child->next)
+		wdgevent(child,  WDGDRAW);
+	attron(A_DIM | COLOR_PAIR(3));
+	for(child = wdg->child; child; child = child->next)
+	for(int y = 0; y <= wdg->height; y++)
+		mvaddch(wdg->y + y, child->x + child->width + 1, ' ');
+	attroff(A_DIM | COLOR_PAIR(3));
+	if(wdg->next)
+	{
+		wdg = wdg->next;
+		goto again;
+	}
+}
+
 void wdgmgrdraw(void)
 {
-	int w;
-	int visX;
-
-	for(int i = 0; i < WidgetCnt; i++)
-		wdgevent(Widgets[i], WDGDRAW);
-	// draw barrier
-	/*attron(A_DIM | COLOR_PAIR(3));
-	if(!(Rotation % 2))
-	{
-		w =  / WidgetCnt;
-		for(int i = 1; i < WidgetCnt; i++)
-			for(int y = 0; y < SizeY; y++)
-				mvaddch(y, w * t + t - 1, ' ');
-	}
-	attroff(A_DIM | COLOR_PAIR(3));*/
-	// draw cursor
+	wdgdraw(FirstWidget);
 	wdgevent(Focus, WDGCURSORDRAW);
 }
 

@@ -1,9 +1,4 @@
 struct widget;
-struct widgetcontainer;
-
-typedef union eventinfo {
-	MEVENT mouse;
-} *Eventinfo;
 
 typedef void (*motionproc)(struct widget *wdg);
 
@@ -14,10 +9,15 @@ typedef struct motion {
 
 typedef void (*eventproc)(struct widget *wdg, int eId);
 
+struct insets {
+	int left, top, right, bottom;
+};
+
 typedef struct widgetclass {
 	char *name;
 	size_t size;
 	eventproc proc;
+	struct insets insets;
 	int motionCnt;
 	struct motion motions[0];
 } *Widgetclass;
@@ -28,6 +28,7 @@ Widgetclass wdgfindclass(const char *name);
 #define _WIDGET_HEADER Widgetclass wc; \
 	int flags; \
 	int x, y, width, height; \
+	struct widget *prevFocus, *nextFocus; \
 	struct widget *parent, *prev, *next, *child
 
 typedef struct widget {

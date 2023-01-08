@@ -42,7 +42,6 @@ int main(int argc, char **argv)
 		endwin();
 		exit(0);
 	}
-
 	noecho();
 	// timeout(-1);
 	// cbreak();
@@ -85,6 +84,7 @@ int main(int argc, char **argv)
 	wc->name = strdup("Text");
 	wc->size = sizeof(struct text);
 	wc->proc = (eventproc) txevent;
+	wc->insets = (struct insets) { 5, 0, 0, 1 };
 	wc->motionCnt = ARRLEN(txMotions);
 	memcpy(wc->motions, txMotions, sizeof txMotions);
 	wdgaddclass(wc);
@@ -108,6 +108,7 @@ int main(int argc, char **argv)
 	wc->name = strdup("Console");
 	wc->size = sizeof(struct console);
 	wc->proc = (eventproc) csevent;
+	wc->insets = (struct insets) { 0, 0, 0, 0 };
 	wc->motionCnt = ARRLEN(consoleMotions);
 	memcpy(wc->motions, consoleMotions, sizeof consoleMotions);
 	wdgaddclass(wc);
@@ -124,7 +125,6 @@ int main(int argc, char **argv)
 		wdg = wdgcreate("Text");
 		wdgattach(wdg, parent);
 	}
-
 	wdgattach(parent, NULL);
 
 	wdg = wdgcreate("Console");
@@ -141,12 +141,12 @@ int main(int argc, char **argv)
 		switch(c)
 		{
 		case 'f' - ('a' - 1):
-			if(Focus->next)
-				Focus = Focus->next;
+			if(Focus->nextFocus)
+				Focus = Focus->nextFocus;
 			else
 			{
-				while(Focus->prev)
-					Focus = Focus->prev;
+				while(Focus->prevFocus)
+					Focus = Focus->prevFocus;
 			}
 			break;
 		case 'r' - ('a' - 1):
