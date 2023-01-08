@@ -27,6 +27,7 @@
 #include "wdgmgr.h"
 #include "wdg/console.h"
 #include "wdg/text.h"
+#include "wdg/code.h"
 
 int main(int argc, char **argv)
 {
@@ -113,6 +114,20 @@ int main(int argc, char **argv)
 	memcpy(wc->motions, consoleMotions, sizeof consoleMotions);
 	wdgaddclass(wc);
 
+	struct motion codeMotions[] = {
+		{ WDGINIT, (motionproc) cdinit },
+		{ WDGUNINIT, (motionproc) cduninit },
+		{ WDGDRAW, (motionproc) cddraw },
+	};
+	wc = malloc((sizeof*wc) + (sizeof codeMotions));
+	wc->name = strdup("Code");
+	wc->size = sizeof(struct code);
+	wc->proc = (eventproc) cdputc;
+	wc->insets = (struct insets) { 0, 0, 0, 0 };
+	wc->motionCnt = ARRLEN(codeMotions);
+	memcpy(wc->motions, codeMotions, sizeof codeMotions);
+	wdgaddclass(wc);
+
 	parent = wdgcreate(NULL);
 	for(int t = 1; t < argc; t++)
 	{
@@ -127,7 +142,7 @@ int main(int argc, char **argv)
 	}
 	wdgattach(parent, NULL);
 
-	wdg = wdgcreate("Console");
+	wdg = wdgcreate("Code");
 	wdgattach(wdg, NULL);
 
 	do

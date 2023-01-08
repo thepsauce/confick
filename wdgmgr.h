@@ -5,7 +5,6 @@ int SizeX, SizeY;
 void wdgattach(Widget wdg, Widget parent)
 {
 	Widget last;
-	struct focusnode *node;
 	
 	wdg->parent = parent;
 	if(!parent)

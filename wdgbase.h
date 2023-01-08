@@ -36,8 +36,7 @@ typedef struct widget {
 } *Widget;
 
 Widget wdgcreate(const char *clsName);
-void wdgfree(Widget text);
-void wdgclear(Widget wdg);
+void wdgfree(Widget wdg);
 #define WDGINIT (-1)
 #define WDGUNINIT (-2)
 #define WDGDRAW (-3)
@@ -56,22 +55,27 @@ void wdgmgrfocusnext(void);
 void wdgmgrrotate(void);
 
 #define TTNONE 0
-#define TTWORD 1
-#define TTNUMBER 2
+#define TTNEWLINE 1
+#define TTSPACE 2
+#define TTINDENT 3
 
-typedef struct token {
+typedef struct codetoken {
 	int type;
-	const char *str;
+	char *str;
 	size_t len;
-	struct token *prev, *next;
-} *Token;
+	struct codetoken *prev, *next, *child;
+} *CodeToken;
 
-typedef struct codewidget {
+typedef struct code {
 	_WIDGET_HEADER;
-	struct token first;
-	struct token *cur;
+	CodeToken first;
+	CodeToken cur;
 	size_t cursor;
 } *CodeWidget;
+
+void cdclear(CodeWidget cd);
+void cdmove(CodeWidget cd, int x, int y);
+void cdputc(CodeWidget cd, int c);
 
 typedef struct line {
 	int flags;
@@ -90,18 +94,25 @@ typedef struct text {
 	int lineCnt, lineCap;
 } *TextWidget;
 
+// clears the text area
 void txclear(TextWidget tx);
+// moves the cursor
 void txmove(TextWidget tx, int x, int y);
+// deletes char at cursor
 void txdelc(TextWidget tx);
-void txputc(TextWidget text, int c);
-void txputs(TextWidget text, const char *s);
+// puts char at cursor
+void txputc(TextWidget tx, int c);
+// puts string at cursor (untested and unused function)
+void txputs(TextWidget tx, const char *s);
+// clears all text and replaces it with given file
 void txopen(TextWidget tx, const char *fileName);
+// saves all text to file
 void txsave(TextWidget tx);
 // breaks the line at the cursor
 void txbreak(TextWidget tx);
 
 // these functions are incomplete, don't call them with out extra supporting structures
-// returns the index of the char under the given visible cursor X 
+// returns the index of the char under the given visible cursor x 
 int _txshiftvisx(TextWidget tx, int visX, int y);
 // returns the x coordinate of the visible cursor x
 int _txviscurx(TextWidget tx, int x, int y);
