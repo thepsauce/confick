@@ -58,6 +58,7 @@ int main(int argc, char **argv)
 	init_pair(1, COLOR_RED, 0);
 	init_pair(2, COLOR_MAGENTA, 0);
 	init_pair(3, COLOR_BLACK, COLOR_WHITE);
+	init_pair(4, COLOR_GREEN, COLOR_BLACK);
 
 	Widgetclass wc;
 	void tmp_close(Widget wdg)

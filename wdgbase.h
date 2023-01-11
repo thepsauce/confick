@@ -58,6 +58,9 @@ void wdgmgrrotate(void);
 #define TTNEWLINE 1
 #define TTSPACE 2
 #define TTINDENT 3
+#define TTNUMBER 4
+#define TTWORD 5
+#define TTKEYWORD1 6
 
 typedef struct codetoken {
 	int type;

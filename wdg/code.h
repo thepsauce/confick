@@ -25,9 +25,8 @@ CodeToken _cdsplittoken(CodeWidget cd, int type)
 		return cd->cur;
 	}
 	tok = malloc(sizeof*tok);
+	memset(tok, 0, sizeof*tok);
 	tok->type = type;
-	tok->str = NULL;
-	tok->len = 0;
 	if(!cd->cursor)
 	{
 		// insert token before current
@@ -39,10 +38,7 @@ CodeToken _cdsplittoken(CodeWidget cd, int type)
 			tok->prev = cd->cur->prev;
 		}
 		else
-		{
-			tok->prev = NULL;
 			cd->first = tok;
-		}
 		cd->cur->prev = tok;
 		tok->next = cd->cur;
 	}
@@ -56,8 +52,6 @@ CodeToken _cdsplittoken(CodeWidget cd, int type)
 			cd->cur->next->prev = tok;
 			tok->next = cd->cur->next;
 		}
-		else
-			tok->next = NULL;
 		cd->cur->next = tok;
 		tok->prev = cd->cur;
 	}
@@ -69,6 +63,7 @@ CodeToken _cdsplittoken(CodeWidget cd, int type)
 		CodeToken t1, t2;
 		t1 = cd->cur;
 		t2 = malloc(sizeof*tok);
+		memset(t2, 0, sizeof*tok);
 		t2->type = t1->type;
 		t2->len = t1->len - cd->cursor;
 		if(t1->str)
@@ -82,8 +77,6 @@ CodeToken _cdsplittoken(CodeWidget cd, int type)
 			t1->next->prev = t2;
 			t2->next = t1->next;	
 		}
-		else
-			t2->next = NULL;
 		t1->next = tok;
 		tok->prev = t1;
 		tok->next = t2;
@@ -92,15 +85,129 @@ CodeToken _cdsplittoken(CodeWidget cd, int type)
 	return tok;
 }
 
+void _cdtokinsert(CodeToken tok, int index, int c)
+{
+	tok->str = realloc(tok->str, tok->len + 1);
+	tok->str[tok->len] = c;
+	tok->len++;
+}
+
+void cdleft(CodeWidget cd)
+{
+	if(cd->cursor)
+		cd->cursor--;
+	else if(cd->cur->prev)
+	{
+		cd->cur = cd->cur->prev;
+		cd->cursor = cd->cur->len - 1;
+	}
+}
+
+void cdright(CodeWidget cd)
+{
+	if(cd->cursor != cd->cur->len)
+		cd->cursor++;
+	else if(cd->cur->next)
+	{
+		cd->cur = cd->cur->next;
+		cd->cursor = 1;
+	}
+}
+
+void cddelete(CodeWidget cd)
+{
+	if(cd->cursor == cd->cur->len)
+	{
+
+	}
+}
+
 void cdputc(CodeWidget cd, int c)
 {
 	CodeToken tok;
+	const struct {
+		const char *word;
+		int type;
+	} keywords[] = {
+		{ "auto", TTKEYWORD1 },
+		{ "break", TTKEYWORD1 },
+		{ "case", TTKEYWORD1 },
+		{ "char", TTKEYWORD1 },
+		{ "const", TTKEYWORD1 },
+		{ "continue", TTKEYWORD1 },
+		{ "default", TTKEYWORD1 },
+		{ "do", TTKEYWORD1 },
+		{ "double", TTKEYWORD1 },
+		{ "else", TTKEYWORD1 },
+		{ "enum", TTKEYWORD1 },
+		{ "extern", TTKEYWORD1 },
+		{ "float", TTKEYWORD1 },
+		{ "for", TTKEYWORD1 },
+		{ "goto", TTKEYWORD1 },
+		{ "if", TTKEYWORD1 },
+		{ "int", TTKEYWORD1 },
+		{ "long", TTKEYWORD1 },
+		{ "register", TTKEYWORD1 },
+		{ "return", TTKEYWORD1 },
+		{ "short", TTKEYWORD1 },
+		{ "signed", TTKEYWORD1 },
+		{ "sizeof", TTKEYWORD1 },
+		{ "static", TTKEYWORD1 },
+		{ "struct", TTKEYWORD1 },
+		{ "switch", TTKEYWORD1 },
+		{ "typedef", TTKEYWORD1 },
+		{ "typeof", TTKEYWORD1 },
+		{ "union", TTKEYWORD1 },
+		{ "unsigned", TTKEYWORD1 },
+		{ "void", TTKEYWORD1 },
+		{ "volatile", TTKEYWORD1 },
+		{ "white", TTKEYWORD1 },
+	};
 	
 	if(c < 0 || c > 255)
 		return;
 	tok = cd->cur;
 	switch(c)
 	{
+	case 'a' ... 'z':
+	case 'A' ... 'Z':
+	case '_': case '$':
+		if(tok->type == TTWORD || tok->type == TTKEYWORD1)
+		{
+			_cdtokinsert(tok, cd->cursor, c);
+			cd->cursor++;
+		}
+		else
+		{
+			tok = _cdsplittoken(cd, TTWORD);
+			tok->str = malloc(1);
+			tok->len = 1;
+			tok->str[0] = c;
+			cd->cursor = 1;
+		}
+		tok->type = TTWORD;
+		for(int i = 0; i < ARRLEN(keywords); i++)
+			if(tok->len == strlen(keywords[i].word) && !memcmp(tok->str, keywords[i].word, tok->len))
+			{
+				tok->type = TTKEYWORD1;
+				break;
+			}
+		break;
+	case '0' ... '9':
+		if(tok->type == TTNUMBER)
+		{
+			_cdtokinsert(tok, cd->cursor, c);
+			cd->cursor++;
+		}
+		else
+		{
+			tok = _cdsplittoken(cd, TTNUMBER);
+			tok->str = malloc(1);
+			tok->len = 1;
+			tok->str[0] = c;
+			cd->cursor = 1;
+		}
+		break;
 	case '\n':
 		if(tok->type == TTNEWLINE)
 		{
@@ -152,8 +259,13 @@ void cdputc(CodeWidget cd, int c)
 
 void cddraw(CodeWidget cd, int c)
 {
+	static int colors[255];
 	struct codetoken *tok;
 	int x, y;
+
+	colors[TTNUMBER] = COLOR_PAIR(2);
+	colors[TTWORD] = COLOR_PAIR(3);
+	colors[TTKEYWORD1] = COLOR_PAIR(4);
 
 	x = cd->x;
 	y = cd->y;
@@ -172,12 +284,15 @@ void cddraw(CodeWidget cd, int c)
 			x += tok->len * 4; // TODO: store the tab constant somewhere
 			break;
 		default:
+			attron(colors[tok->type]);
 			for(int i = 0; i < tok->len; i++)
 			{
 				mvaddch(y, x, tok->str[i]);
 				x++;
 			}
+			attroff(colors[tok->type]);
 		}
 	}
+	move(y, x);
 }
 
