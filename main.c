@@ -119,6 +119,10 @@ int main(int argc, char **argv)
 		{ WDGINIT, (motionproc) cdinit },
 		{ WDGUNINIT, (motionproc) cduninit },
 		{ WDGDRAW, (motionproc) cddraw },
+		{ KEY_LEFT, (motionproc) cdleft },
+		{ KEY_RIGHT, (motionproc) cdright },
+		{ KEY_DC, (motionproc) cddelete },
+		{ KEY_BACKSPACE, (motionproc) cdbackdelete },
 	};
 	wc = malloc((sizeof*wc) + (sizeof codeMotions));
 	wc->name = strdup("Code");

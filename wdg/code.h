@@ -116,10 +116,50 @@ void cdright(CodeWidget cd)
 
 void cddelete(CodeWidget cd)
 {
+	CodeToken tok;
+
 	if(cd->cursor == cd->cur->len)
 	{
-
+		tok = cd->cur->next;
+		if(tok)
+		{
+			if(tok->len == 1)
+			{
+				if(tok->next)
+					tok->next->prev = cd->cur;
+				cd->cur->next = tok->next;
+				free(tok);
+			}
+			else
+			{
+				memmove(tok->str, tok->str + 1, tok->len - 1);
+				tok->len--;
+			}
+		}
 	}
+	else
+	{
+		tok = cd->cur;
+		if(tok->len == 1)
+		{
+			if(tok->next)
+				tok->next->prev = tok->prev;
+			if(tok->prev)
+				tok->prev->next = tok->next;
+			free(tok);
+		}
+		else
+		{
+			tok->len--;
+			memmove(tok->str + cd->cursor, tok->str + cd->cursor + 1, tok->len - cd->cursor);
+		}
+	}
+}
+
+void cdbackdelete(CodeWidget cd)
+{
+	cdleft(cd);
+	cddelete(cd);
 }
 
 void cdputc(CodeWidget cd, int c)
@@ -262,6 +302,7 @@ void cddraw(CodeWidget cd, int c)
 	static int colors[255];
 	struct codetoken *tok;
 	int x, y;
+	int curX, curY;
 
 	colors[TTNUMBER] = COLOR_PAIR(2);
 	colors[TTWORD] = COLOR_PAIR(3);
@@ -274,16 +315,36 @@ void cddraw(CodeWidget cd, int c)
 		switch(tok->type)
 		{
 		case TTNEWLINE:
+			if(tok == cd->cur)
+			{
+				curX = 0;
+				curY = y + cd->cursor;
+			}
 			x = 0;
 			y += tok->len;
 			break;
 		case TTSPACE:
+			if(tok == cd->cur)
+			{
+				curX = x + cd->cursor;
+				curY = y;
+			}
 			x += tok->len;
 			break;
 		case TTINDENT:
+			if(tok == cd->cur)
+			{
+				curX = x + cd->cursor * 4;
+				curY = y;
+			}
 			x += tok->len * 4; // TODO: store the tab constant somewhere
 			break;
 		default:
+			if(tok == cd->cur)
+			{
+				curX = x + cd->cursor;
+				curY = y;
+			}
 			attron(colors[tok->type]);
 			for(int i = 0; i < tok->len; i++)
 			{
@@ -293,6 +354,6 @@ void cddraw(CodeWidget cd, int c)
 			attroff(colors[tok->type]);
 		}
 	}
-	move(y, x);
+	move(curY, curX);
 }
 
