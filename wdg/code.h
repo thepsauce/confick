@@ -117,36 +117,52 @@ void cdright(CodeWidget cd)
 void cddelete(CodeWidget cd)
 {
 	CodeToken tok;
+	CodeToken next;
 
-	if(cd->cursor == cd->cur->len)
+	tok = cd->cur;
+	next = tok->next;
+
+	if(cd->cursor == tok->len)
 	{
-		tok = cd->cur->next;
-		if(tok)
+		if(next)
 		{
-			if(tok->len == 1)
+			if(next->len == 1)
 			{
-				if(tok->next)
-					tok->next->prev = cd->cur;
-				cd->cur->next = tok->next;
-				free(tok);
+				if(next->next)
+					next->next->prev = tok;
+				tok->next = next->next;
+				free(next);
 			}
 			else
 			{
-				memmove(tok->str, tok->str + 1, tok->len - 1);
-				tok->len--;
+				memmove(next->str, next->str + 1, next->len - 1);
+				next->len--;
 			}
 		}
 	}
 	else
 	{
-		tok = cd->cur;
 		if(tok->len == 1)
 		{
-			if(tok->next)
-				tok->next->prev = tok->prev;
+			if(next)
+				next->prev = tok->prev;
 			if(tok->prev)
-				tok->prev->next = tok->next;
-			free(tok);
+			{
+				tok->prev->next = next;
+				cd->cur = tok->prev;
+				cd->cursor = cd->cur->len;
+				free(tok);
+			}
+			else if(next)
+			{
+				cd->cur = next;
+				next->prev = NULL;
+				free(tok);
+			}
+			else
+			{
+				memset(tok, 0, sizeof*tok);
+			}
 		}
 		else
 		{
