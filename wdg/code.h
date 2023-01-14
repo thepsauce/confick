@@ -6,22 +6,27 @@ void cdinit(CodeWidget cd)
 
 void cdtokfree(CodeToken tok)
 {
-	if(tok->type & 1)
+	if(tok->type & TTUSESTR)
 		free(tok->str);
 	free(tok);
 }
 
 void cduninit(CodeWidget cd)
 {
-	struct codetoken *tok, *next;
-
-	for(tok = cd->first, next = tok->next; tok; tok = next, next = tok->next)
-		cdtokfree(tok);
+	cdclear(cd);
 }
 
 void cdclear(CodeWidget cd)
 {
+	struct codetoken *tok, *next;
 
+	for(tok = cd->first; tok; tok = next)
+	{
+		next = tok->next;
+		cdtokfree(tok);
+	}
+	cd->cur = cd->first = malloc(sizeof*cd->first);
+	memset(cd->first, 0, sizeof*cd->first);
 }
 
 void cdopen(CodeWidget cd, const char *fileName)
@@ -34,9 +39,7 @@ void cdopen(CodeWidget cd, const char *fileName)
 	if(!(file = fopen(fileName, "r")))
     	return;
 	while((c = fgetc(file)) != EOF)
-	{
 		cdputc(cd, c);
-	}
     fclose(file);
 }
 
@@ -49,7 +52,26 @@ void cdsave(CodeWidget cd)
     assert(file);
 	for(tok = cd->cur; tok; tok = tok->next)
 	{
-		
+		switch(tok->type)
+		{
+		case TTNEWLINE:
+			for(int i = 0; i < tok->len; i++)
+				fputc('\n', file);
+			break;
+		case TTSPACE:
+			for(int i = 0; i < tok->len; i++)
+				fputc(' ', file);
+			break;
+		case TTINDENT:
+			for(int i = 0; i < tok->len; i++)
+				fputc('\t', file);
+			break;
+		case TTWORD:
+			fwrite(tok->str, 1, tok->len, file);
+			break;
+		default:
+			fputc(tok->c, file);
+		}
 	}
     fclose(file);
 }
@@ -127,7 +149,8 @@ CodeToken _cdsplittoken(CodeWidget cd, int type)
 void _cdtokinsert(CodeToken tok, int index, int c)
 {
 	tok->str = realloc(tok->str, tok->len + 1);
-	tok->str[tok->len] = c;
+	memmove(tok->str + index + 1, tok->str + index, tok->len - index);
+	tok->str[index] = c;
 	tok->len++;
 }
 
@@ -204,15 +227,35 @@ void cddelete(CodeWidget cd)
 		{
 			if(next->len == 1)
 			{
+				// example case: 32>a>;>po
+				// the ; is deleted (> represent links)
 				if(next->next)
 					next->next->prev = tok;
 				tok->next = next->next;
 				cdtokfree(next);
+				next = tok->next;
+				if(next && (tok->type & TTFUSE) && tok->type == next->type)
+				{
+					if(next->next)
+					{
+						next->next->prev = tok;
+						tok->next = next->next;
+					}
+					else
+						tok->next = NULL;
+					if(tok->type & TTUSESTR)
+					{
+						tok->str = realloc(tok->str, tok->len + next->len);
+						memcpy(tok->str + tok->len, next->str, next->len);
+					}
+					tok->len += next->len;
+					cdtokfree(next);
+				}
 			}
 			else
 			{
 				next->len--;
-				if(next->type & 1)
+				if(next->type & TTUSESTR)
 					memmove(next->str, next->str + 1, next->len);
 			}
 		}
@@ -221,13 +264,29 @@ void cddelete(CodeWidget cd)
 	{
 		if(tok->len == 1)
 		{
-			if(next)
-				next->prev = tok->prev;
 			if(tok->prev)
 			{
-				tok->prev->next = next;
-				cd->cur = tok->prev;
-				cd->cursor = cd->cur->len;
+				if(next && (next->type & TTFUSE) && next->type == tok->prev->type)
+				{
+					if(next->next)
+						next->next->prev = tok->prev;
+					tok->prev->next = next->next;
+					if(tok->prev->type & TTUSESTR)
+					{
+						tok->prev->str = realloc(tok->prev->str, tok->prev->len + next->len);
+						memcpy(tok->prev->str + tok->prev->len, next->str, next->len);
+					}
+					cd->cur = tok->prev;
+					cd->cursor = tok->prev->len;
+					tok->prev->len += next->len;
+					cdtokfree(next);
+				}
+				else
+				{
+					tok->prev->next = next;
+					cd->cur = tok->prev;
+					cd->cursor = cd->cur->len;
+				}
 				cdtokfree(tok);
 			}
 			else if(next)
@@ -244,7 +303,7 @@ void cddelete(CodeWidget cd)
 		else
 		{
 			tok->len--;
-			if(tok->type & 1)
+			if(tok->type & TTUSESTR)
 				memmove(tok->str + cd->cursor, tok->str + cd->cursor + 1, tok->len - cd->cursor);
 		}
 	}
@@ -471,6 +530,8 @@ void cddraw(CodeWidget cd, int c)
 	if(!cd->first)
 	{
 		move(cd->y, cd->x);
+		cd->relCurX = 0;
+		cd->relCurY = 0;
 		return;
 	}
 	x = cd->x;
@@ -670,6 +731,8 @@ void cddraw(CodeWidget cd, int c)
 	render_done:;
 	}
 	move(curY, curX);
+	cd->relCurX = curX - cd->x;
+	cd->relCurY = curY - cd->y;
 #undef NORMALRENDER
 }
 
