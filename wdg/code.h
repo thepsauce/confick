@@ -529,7 +529,6 @@ void cddraw(CodeWidget cd, int c)
 	}
 	if(!cd->first)
 	{
-		move(cd->y, cd->x);
 		cd->relCurX = 0;
 		cd->relCurY = 0;
 		return;
@@ -640,7 +639,7 @@ void cddraw(CodeWidget cd, int c)
 					goto render_done;
 				}
 			f = cdfindtok(tok, ARRLEN(spaceMask), spaceMask, TTWORD, FINDTOKLEFT);
-			if(f && !strcmp(f->str, "struct"))
+			if(f && f->len == sizeof("struct") - 1 && !strcmp(f->str, "struct"))
 			{
 				STRRENDER(tok, COLOR_PAIR(C_PAIR_KEYWORD2));
 			}
@@ -730,9 +729,12 @@ void cddraw(CodeWidget cd, int c)
 		}
 	render_done:;
 	}
-	move(curY, curX);
 	cd->relCurX = curX - cd->x;
 	cd->relCurY = curY - cd->y;
 #undef NORMALRENDER
 }
 
+void cddrawcursor(CodeWidget cd)
+{
+	move(cd->relCurY + cd->y, cd->relCurX + cd->x);
+}

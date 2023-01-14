@@ -40,7 +40,7 @@ void wdgfree(Widget wdg);
 #define WDGINIT (-1)
 #define WDGUNINIT (-2)
 #define WDGDRAW (-3)
-#define WDGCURSORDRAW (-4)
+#define WDGDRAWCURSOR (-4)
 #define WDGDEFAULT (-5)
 void wdgevent(Widget wdg, int eId);
 

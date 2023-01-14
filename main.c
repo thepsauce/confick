@@ -91,7 +91,7 @@ int main(int argc, char **argv)
 		{ WDGINIT, (motionproc) txinit },
 		{ WDGUNINIT, (motionproc) txuninit },
 		{ WDGDRAW, (motionproc) txdraw },
-		{ WDGCURSORDRAW, (motionproc) txdrawcursor },
+		{ WDGDRAWCURSOR, (motionproc) txdrawcursor },
 		{ KEY_LEFT, (motionproc) txleft },
 		{ KEY_UP, (motionproc) txup },
 		{ KEY_RIGHT, (motionproc) txright },
@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 		{ WDGINIT, (motionproc) txinit },
 		{ WDGUNINIT, (motionproc) txuninit },
 		{ WDGDRAW, (motionproc) csdraw },
-		{ WDGCURSORDRAW, (motionproc) txdrawcursor },
+		{ WDGDRAWCURSOR, (motionproc) txdrawcursor },
 		{ KEY_LEFT, (motionproc) csleft },
 		{ KEY_UP, (motionproc) csup },
 		{ KEY_RIGHT, (motionproc) csright },
@@ -140,6 +140,7 @@ int main(int argc, char **argv)
 		{ WDGINIT, (motionproc) cdinit },
 		{ WDGUNINIT, (motionproc) cduninit },
 		{ WDGDRAW, (motionproc) cddraw },
+		{ WDGDRAWCURSOR, (motionproc) cddrawcursor },
 		{ KEY_LEFT, (motionproc) cdleft },
 		{ KEY_RIGHT, (motionproc) cdright },
 		{ KEY_UP, (motionproc) cdup },
@@ -195,13 +196,13 @@ int main(int argc, char **argv)
 				while(Focus->prevFocus)
 					Focus = Focus->prevFocus;
 			}
-			break;
+			continue;
 		case 'r' - ('a' - 1):
 			//wdgmgrrotate();		
 			break;
 		case 'q' - ('a' - 1):
 			wdgmgrdiscard();		
-			break;
+			continue;
 		}
 		if((wdg = wdgmgrgetfocus()))
 			wdgevent(wdg, c);

@@ -132,6 +132,38 @@ void wdgmgrupdate(int szX, int szY)
 
 void wdgmgrdiscard(void)
 {
+	Widget wdg, prev, parent;
+
+	wdg = FirstWidget;
+	while(1)
+	{
+		// move to deepest child
+		while(wdg->child)
+		{
+			wdg = wdg->child;
+			while(wdg->next)
+				wdg = wdg->next;
+		}
+		prev = wdg->prev;
+		parent = wdg->parent;
+		wdgevent(wdg, WDGUNINIT);
+		free(wdg);
+		if(wdg == FirstWidget)
+			break;
+		if(!prev)
+		{
+			// move back up to parent and isolate children from parent
+			wdg = parent;
+			wdg->child = NULL;
+		}
+		else
+		{
+			// move to sibling and isolate destroyed sibling
+			wdg = prev;
+			wdg->next = NULL;
+		}
+	}
+
 	endwin();
 	exit(0);
 }
@@ -160,7 +192,7 @@ again:
 void wdgmgrdraw(void)
 {
 	wdgdraw(FirstWidget);
-	wdgevent(Focus, WDGCURSORDRAW);
+	wdgevent(Focus, WDGDRAWCURSOR);
 }
 
 Widget wdgmgrgetfocus(void)
