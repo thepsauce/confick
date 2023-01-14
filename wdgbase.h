@@ -55,22 +55,41 @@ void wdgmgrfocusnext(void);
 void wdgmgrrotate(void);
 
 #define TTNONE 0
-#define TTNEWLINE 1
-#define TTSPACE 2
-#define TTINDENT 3
-#define TTNUMBER 4
-#define TTWORD 5
-#define TTKEYWORD1 6
+#define TTNEWLINE 2
+#define TTSPACE 4
+#define TTINDENT 6
+#define TTNUMBER 7
+#define TTWORD 9
 
 typedef struct codetoken {
 	int type;
-	char *str;
+	union {
+		int c;
+		char *str;
+	};
 	size_t len;
-	struct codetoken *prev, *next, *child;
+	struct codetoken *prev, *next;
 } *CodeToken;
 
+// c flavor
+enum {
+	C_PAIR_TEXT = 5,
+	C_PAIR_NUMBER,
+	C_PAIR_STRING1,
+	C_PAIR_STRING2,
+	C_PAIR_COMMENT1,
+	C_PAIR_COMMENT2,
+	C_PAIR_KEYWORD1,
+	C_PAIR_KEYWORD2,
+	C_PAIR_FUNCTION,
+	C_PAIR_PREPROC1,
+	C_PAIR_PREPROC2,
+	C_PAIR_CHAR,
+};
 typedef struct code {
 	_WIDGET_HEADER;
+	char *fileName;
+	int scrollY;
 	CodeToken first;
 	CodeToken cur;
 	size_t cursor;

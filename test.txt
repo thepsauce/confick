@@ -1,3 +1,6 @@
+const char *str = "The story of thy life";
+str("wait a second, this is not a function");
+
 Name's Jack
 I want to skate
 Crossing's fate

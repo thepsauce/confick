@@ -4,15 +4,54 @@ void cdinit(CodeWidget cd)
 	memset(cd->first, 0, sizeof*cd->first);
 }
 
+void cdtokfree(CodeToken tok)
+{
+	if(tok->type & 1)
+		free(tok->str);
+	free(tok);
+}
+
 void cduninit(CodeWidget cd)
 {
 	struct codetoken *tok, *next;
 
 	for(tok = cd->first, next = tok->next; tok; tok = next, next = tok->next)
+		cdtokfree(tok);
+}
+
+void cdclear(CodeWidget cd)
+{
+
+}
+
+void cdopen(CodeWidget cd, const char *fileName)
+{
+	FILE *file;
+	int c;
+
+	cdclear(cd);
+	cd->fileName = strdup(fileName);
+	if(!(file = fopen(fileName, "r")))
+    	return;
+	while((c = fgetc(file)) != EOF)
 	{
-		free(tok->str);
-		free(tok);
+		cdputc(cd, c);
 	}
+    fclose(file);
+}
+
+void cdsave(CodeWidget cd)
+{
+	FILE *file;
+	CodeToken tok;
+
+    file = fopen(cd->fileName, "w");
+    assert(file);
+	for(tok = cd->cur; tok; tok = tok->next)
+	{
+		
+	}
+    fclose(file);
 }
 
 CodeToken _cdsplittoken(CodeWidget cd, int type)
@@ -114,6 +153,43 @@ void cdright(CodeWidget cd)
 	}
 }
 
+void cdup(CodeWidget cd)
+{
+	cd->scrollY++;
+}
+
+void cddown(CodeWidget cd)
+{
+	if(cd->scrollY)
+		cd->scrollY--;
+}
+
+void cdhome(CodeWidget cd)
+{
+	CodeToken tok;
+
+	tok = cd->cur;
+	if(tok->type != TTNEWLINE || !cd->cursor)
+	{
+		for(; tok->prev && tok->prev->type != TTNEWLINE; tok = tok->prev);
+		cd->cursor = 0;
+		cd->cur = tok;
+	}
+}
+
+void cdend(CodeWidget cd)
+{
+	CodeToken tok;
+
+	tok = cd->cur;
+	if(tok->type != TTNEWLINE || cd->cursor == tok->len)
+	{
+		for(; tok->next && tok->next->type != TTNEWLINE; tok = tok->next);
+		cd->cursor = tok->len;
+		cd->cur = tok;
+	}
+}
+
 void cddelete(CodeWidget cd)
 {
 	CodeToken tok;
@@ -131,12 +207,13 @@ void cddelete(CodeWidget cd)
 				if(next->next)
 					next->next->prev = tok;
 				tok->next = next->next;
-				free(next);
+				cdtokfree(next);
 			}
 			else
 			{
-				memmove(next->str, next->str + 1, next->len - 1);
 				next->len--;
+				if(next->type & 1)
+					memmove(next->str, next->str + 1, next->len);
 			}
 		}
 	}
@@ -151,13 +228,13 @@ void cddelete(CodeWidget cd)
 				tok->prev->next = next;
 				cd->cur = tok->prev;
 				cd->cursor = cd->cur->len;
-				free(tok);
+				cdtokfree(tok);
 			}
 			else if(next)
 			{
 				cd->cur = next;
 				next->prev = NULL;
-				free(tok);
+				cdtokfree(tok);
 			}
 			else
 			{
@@ -167,7 +244,8 @@ void cddelete(CodeWidget cd)
 		else
 		{
 			tok->len--;
-			memmove(tok->str + cd->cursor, tok->str + cd->cursor + 1, tok->len - cd->cursor);
+			if(tok->type & 1)
+				memmove(tok->str + cd->cursor, tok->str + cd->cursor + 1, tok->len - cd->cursor);
 		}
 	}
 }
@@ -181,44 +259,6 @@ void cdbackdelete(CodeWidget cd)
 void cdputc(CodeWidget cd, int c)
 {
 	CodeToken tok;
-	const struct {
-		const char *word;
-		int type;
-	} keywords[] = {
-		{ "auto", TTKEYWORD1 },
-		{ "break", TTKEYWORD1 },
-		{ "case", TTKEYWORD1 },
-		{ "char", TTKEYWORD1 },
-		{ "const", TTKEYWORD1 },
-		{ "continue", TTKEYWORD1 },
-		{ "default", TTKEYWORD1 },
-		{ "do", TTKEYWORD1 },
-		{ "double", TTKEYWORD1 },
-		{ "else", TTKEYWORD1 },
-		{ "enum", TTKEYWORD1 },
-		{ "extern", TTKEYWORD1 },
-		{ "float", TTKEYWORD1 },
-		{ "for", TTKEYWORD1 },
-		{ "goto", TTKEYWORD1 },
-		{ "if", TTKEYWORD1 },
-		{ "int", TTKEYWORD1 },
-		{ "long", TTKEYWORD1 },
-		{ "register", TTKEYWORD1 },
-		{ "return", TTKEYWORD1 },
-		{ "short", TTKEYWORD1 },
-		{ "signed", TTKEYWORD1 },
-		{ "sizeof", TTKEYWORD1 },
-		{ "static", TTKEYWORD1 },
-		{ "struct", TTKEYWORD1 },
-		{ "switch", TTKEYWORD1 },
-		{ "typedef", TTKEYWORD1 },
-		{ "typeof", TTKEYWORD1 },
-		{ "union", TTKEYWORD1 },
-		{ "unsigned", TTKEYWORD1 },
-		{ "void", TTKEYWORD1 },
-		{ "volatile", TTKEYWORD1 },
-		{ "white", TTKEYWORD1 },
-	};
 	
 	if(c < 0 || c > 255)
 		return;
@@ -228,7 +268,7 @@ void cdputc(CodeWidget cd, int c)
 	case 'a' ... 'z':
 	case 'A' ... 'Z':
 	case '_': case '$':
-		if(tok->type == TTWORD || tok->type == TTKEYWORD1)
+		if(tok->type == TTWORD)
 		{
 			_cdtokinsert(tok, cd->cursor, c);
 			cd->cursor++;
@@ -241,13 +281,6 @@ void cdputc(CodeWidget cd, int c)
 			tok->str[0] = c;
 			cd->cursor = 1;
 		}
-		tok->type = TTWORD;
-		for(int i = 0; i < ARRLEN(keywords); i++)
-			if(tok->len == strlen(keywords[i].word) && !memcmp(tok->str, keywords[i].word, tok->len))
-			{
-				tok->type = TTKEYWORD1;
-				break;
-			}
 		break;
 	case '0' ... '9':
 		if(tok->type == TTNUMBER)
@@ -305,71 +338,338 @@ void cdputc(CodeWidget cd, int c)
 		break;
 	default:
 		tok = _cdsplittoken(cd, TTNONE);
-		tok->str = malloc(1);
+		tok->c = c;
 		tok->len = 1;
-		tok->str[0] = c;
 		cd->cursor = 1;
 	}
 	cd->cur = tok;
 }
 
+#define FINDTOKLEFT 0
+#define FINDTOKRIGHT 1
+CodeToken cdfindtok(CodeToken tok, int ignMaskCnt, const int *ignMask, int find, int dir)
+{
+#define INNERLOOP { \
+	__label__ next; \
+	if(tok->type == find) \
+		return tok; \
+	for(int i = 0; i < ignMaskCnt; i++) \
+		if(ignMask[i] == tok->type) \
+			goto next; \
+	return NULL; \
+	next:; }
+	if(dir == FINDTOKLEFT)
+	{
+		for(tok = tok->prev; tok; tok = tok->prev)
+			INNERLOOP
+	}
+	else
+	{
+		for(tok = tok->next; tok; tok = tok->next)
+			INNERLOOP
+	}
+#undef INNERLOOP
+}
+
 void cddraw(CodeWidget cd, int c)
 {
-	static int colors[255];
-	struct codetoken *tok;
+	CodeToken tok, f;
 	int x, y;
 	int curX, curY;
+	const int spaceMask[] = { TTSPACE, TTINDENT, TTNEWLINE };
+	const char *keywords[] = {
+		"auto",
+		"break"
+		"case",
+		"char",
+		"const",
+		"continue",
+		"default",
+		"do",
+		"double",
+		"else",
+		"enum",
+		"extern",
+		"float",
+		"for",
+		"goto",
+		"if",
+		"int",
+		"long",
+		"register",
+		"return",
+		"short",
+		"signed",
+		"sizeof",
+		"static",
+		"struct",
+		"switch",
+		"typedef",
+		"typeof",
+		"union",
+		"unsigned",
+		"void",
+		"volatile",
+		"white",
 
-	colors[TTNUMBER] = COLOR_PAIR(2);
-	colors[TTWORD] = COLOR_PAIR(3);
-	colors[TTKEYWORD1] = COLOR_PAIR(4);
-
-	x = cd->x;
-	y = cd->y;
-	for(tok = cd->first; tok; tok = tok->next)
+		"FILE",
+	};
+	const char chars[] = {
+		'[', ']', '(', ')', '{', '}', '<', '>', 
+		'=', '+', '-', '*', '/', '%', '!', '~', 
+		'?', ';', ':', ',', '.', '\\'
+	};
+	bool open = 0;
+	char key; // either " ' / * #
+#define STRRENDER(tok, attr) \
+	if(!open) \
+		attron(attr); \
+	for(int i = 0; i < tok->len; i++) \
+	{ \
+		mvaddch(y, x, tok->str[i]); \
+		x++; \
+	} \
+	if(!open) \
+		attroff(attr)
+#define CHARRENDER(tok, attr) \
+	if(!open) \
+		attron(attr); \
+	mvaddch(y, x, tok->c); \
+	x++; \
+	if(!open) \
+		attroff(attr)
+#define MANAGECURSOR(tok) \
+	if(tok == cd->cur) \
+	{ \
+		switch(tok->type) \
+		{ \
+		case TTNEWLINE: \
+			if(cd->cursor) \
+			{ \
+				curX = 0; \
+				curY = y + cd->cursor; \
+			} \
+			else \
+			{ \
+				curX = x; \
+				curY = y; \
+			} \
+			break; \
+		case TTSPACE: \
+			curX = x + cd->cursor; \
+			curY = y; \
+			break; \
+		case TTINDENT: \
+			curX = x + cd->cursor * 4; \
+			curY = y; \
+			break; \
+		default: \
+			curX = x + cd->cursor; \
+			curY = y; \
+		} \
+	}
+	if(!cd->first)
 	{
+		move(cd->y, cd->x);
+		return;
+	}
+	x = cd->x;
+	y = cd->y - cd->scrollY;
+	for(tok = cd->first; tok && y < cd->y; tok = tok->next)
+	{
+		MANAGECURSOR(tok);
 		switch(tok->type)
 		{
 		case TTNEWLINE:
-			if(tok == cd->cur)
-			{
-				curX = 0;
-				curY = y + cd->cursor;
-			}
+			if(open && key != '*')
+				if(!tok->prev || tok->prev->type != TTNONE || tok->prev->c != '\\')
+					open = 0;
 			x = 0;
 			y += tok->len;
 			break;
+		case TTINDENT:
+			x += tok->len * 4;
+			break;
 		case TTSPACE:
-			if(tok == cd->cur)
+		case TTWORD:
+			x += tok->len;
+			break;
+		case TTNONE:
+			x += tok->len;
+			if(!open)
 			{
-				curX = x + cd->cursor;
-				curY = y;
+				switch(tok->c)
+				{
+				case '/':
+					// check for // or /*
+					if(!tok->next || tok->next->type != TTNONE)
+						break;
+					if(tok->next->c != '*' && tok->next->c != '/')
+						break;
+					attron(COLOR_PAIR(C_PAIR_COMMENT1));
+					open = 1;
+					key = tok->next->c;
+					tok = tok->next; // skip / or *
+					x++;
+					break;
+				case '#':
+					attron(COLOR_PAIR(C_PAIR_PREPROC1));
+					open = 1;
+					key = '#';
+					break;
+				case '\"': case '\'':
+					if(!tok->prev || tok->prev->type != TTNONE || tok->prev->c != '\\')
+					{
+						attron(COLOR_PAIR(C_PAIR_STRING1));
+						open = 1;
+						key = tok->c;
+					}
+					break;
+				}
 			}
+			else
+			{
+				switch(tok->c)
+				{
+				// case '/': // a line comment can't be ended with another /
+				case '*':
+					if(!tok->next || tok->next->type != TTNONE || tok->next->c != '/')
+						break;
+					attroff(COLOR_PAIR(C_PAIR_COMMENT1));
+					open = 0;
+					tok = tok->next; // skip /
+					x++;
+					break;
+				case '\"': case '\'':
+					if(!tok->prev || tok->prev->type != TTNONE || tok->prev->c != '\\')
+					{
+						attroff(COLOR_PAIR(C_PAIR_STRING1));
+						open = 0;
+					}
+					break;
+				}
+			}
+			break;
+		}
+	}
+	for(; tok; tok = tok->next)
+	{
+		MANAGECURSOR(tok);
+		switch(tok->type)
+		{
+		case TTNEWLINE:
+			x = 0;
+			y += tok->len;
+			// stops at eol if there is no \ at the end
+			if(open && key != '*')
+				if(!tok->prev || tok->prev->type != TTNONE || tok->prev->c != '\\')
+					open = 0;
+			break;
+		case TTSPACE:
 			x += tok->len;
 			break;
 		case TTINDENT:
-			if(tok == cd->cur)
-			{
-				curX = x + cd->cursor * 4;
-				curY = y;
-			}
 			x += tok->len * 4; // TODO: store the tab constant somewhere
 			break;
-		default:
+		case TTWORD:
+			for(int i = 0; i < ARRLEN(keywords); i++)
+				if(tok->len == strlen(keywords[i]) && !memcmp(tok->str, keywords[i], tok->len))
+				{
+					STRRENDER(tok, A_BOLD | COLOR_PAIR(C_PAIR_KEYWORD1));
+					goto render_done;
+				}
+			f = cdfindtok(tok, ARRLEN(spaceMask), spaceMask, TTWORD, FINDTOKLEFT);
+			if(f && !strcmp(f->str, "struct"))
+			{
+				STRRENDER(tok, COLOR_PAIR(C_PAIR_KEYWORD2));
+			}
+			else
+			{
+				f = cdfindtok(tok, ARRLEN(spaceMask), spaceMask, TTNONE, FINDTOKRIGHT);
+				if(f && f->c == '(')
+				{
+					STRRENDER(tok, COLOR_PAIR(C_PAIR_FUNCTION));
+				}
+				else
+				{
+					STRRENDER(tok, COLOR_PAIR(C_PAIR_TEXT));
+				}
+			}
+			break;
+		case TTNUMBER:
+			STRRENDER(tok, COLOR_PAIR(C_PAIR_NUMBER));
+			break;
+		default: // TTNONE
 			if(tok == cd->cur)
 			{
 				curX = x + cd->cursor;
 				curY = y;
 			}
-			attron(colors[tok->type]);
-			for(int i = 0; i < tok->len; i++)
+			if(!open)
 			{
-				mvaddch(y, x, tok->str[i]);
-				x++;
+				switch(tok->c)
+				{
+				case '/':
+					// check for // or /*
+					if(!tok->next || tok->next->type != TTNONE)
+						break;
+					if(tok->next->c != '*' && tok->next->c != '/')
+						break;
+					attron(COLOR_PAIR(C_PAIR_COMMENT1));
+					open = 1;
+					key = tok->next->c;
+					mvaddch(y, x, '/');
+					addch(key);
+					x++;
+					tok = tok->next;
+					MANAGECURSOR(tok);
+					x++;
+					goto render_done;
+				case '#':
+					attron(COLOR_PAIR(C_PAIR_PREPROC1));
+					open = 1;
+					key = '#';
+					break;
+				case '\"': case '\'':
+					if(!tok->prev || tok->prev->type != TTNONE || tok->prev->c != '\\')
+					{
+						attron(COLOR_PAIR(C_PAIR_STRING1));
+						open = 1;
+						key = tok->c;
+					}
+					break;
+				}
 			}
-			attroff(colors[tok->type]);
+			else if(key == tok->c)
+			{
+				switch(tok->c)
+				{
+				// case '/': // a line comment can't be ended with another /
+				case '*':
+					if(!tok->next || tok->next->type != TTNONE || tok->next->c != '/')
+						break;
+					mvaddstr(y, x, "*/");
+					x++;
+					tok = tok->next;
+					MANAGECURSOR(tok);
+					x++;
+					attroff(COLOR_PAIR(C_PAIR_COMMENT1));
+					open = 0;
+					goto render_done;
+				case '\"': case '\'':
+					if(!tok->prev || tok->prev->type != TTNONE || tok->prev->c != '\\')
+					{
+						attroff(COLOR_PAIR(C_PAIR_STRING1));
+						open = 0;
+					}
+					break;
+				}
+			}
+			CHARRENDER(tok, COLOR_PAIR(C_PAIR_CHAR));
 		}
+	render_done:;
 	}
 	move(curY, curX);
+#undef NORMALRENDER
 }
 

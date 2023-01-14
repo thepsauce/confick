@@ -70,8 +70,16 @@ int main(int argc, char **argv)
 	init_color(COLOR_CYAN, CURSEDRGB(0x20ffbc));
 	init_color(COLOR_RED, CURSEDRGB(0xff2063));
 	
-
-	init_pair(4, COLOR_GREEN, COLOR_BLACK);
+	init_pair(C_PAIR_TEXT, COLOR_WHITE, COLOR_BLACK);
+	init_pair(C_PAIR_NUMBER, COLOR_MAGENTA, COLOR_BLACK);
+	init_pair(C_PAIR_STRING1, COLOR_YELLOW, COLOR_BLACK);
+	init_pair(C_PAIR_STRING2, COLOR_CYAN, COLOR_BLACK);
+	init_pair(C_PAIR_KEYWORD1, COLOR_GREEN, COLOR_BLACK);
+	init_pair(C_PAIR_KEYWORD2, COLOR_BLUE, COLOR_BLACK);
+	init_pair(C_PAIR_COMMENT1, COLOR_RED, COLOR_BLACK);
+	init_pair(C_PAIR_FUNCTION, COLOR_BLUE, COLOR_BLACK);
+	init_pair(C_PAIR_PREPROC1, COLOR_RED, COLOR_BLACK);
+	init_pair(C_PAIR_CHAR, COLOR_YELLOW, COLOR_BLACK);
 
 	Widgetclass wc;
 	void tmp_close(Widget wdg)
@@ -134,8 +142,12 @@ int main(int argc, char **argv)
 		{ WDGDRAW, (motionproc) cddraw },
 		{ KEY_LEFT, (motionproc) cdleft },
 		{ KEY_RIGHT, (motionproc) cdright },
+		{ KEY_UP, (motionproc) cdup },
+		{ KEY_DOWN, (motionproc) cddown },
 		{ KEY_DC, (motionproc) cddelete },
 		{ KEY_BACKSPACE, (motionproc) cdbackdelete },
+		{ KEY_HOME, (motionproc) cdhome },
+		{ KEY_END, (motionproc) cdend },
 	};
 	wc = malloc((sizeof*wc) + (sizeof codeMotions));
 	wc->name = strdup("Code");
@@ -161,6 +173,8 @@ int main(int argc, char **argv)
 	wdgattach(parent, NULL);
 
 	wdg = wdgcreate("Code");
+	if(argc > 1)
+		cdopen((CodeWidget) wdg, argv[1]);
 	wdgattach(wdg, NULL);
 
 	do
