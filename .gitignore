@@ -1,3 +1,4 @@
 *.out
 *.sublime-workspace
 *.sublime-project
+*/misc/*
