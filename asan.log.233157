@@ -1,0 +1,54 @@
+=================================================================
+==233157==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x602000234551 at pc 0x7fcbbd65f427 bp 0x7ffc1dc70af0 sp 0x7ffc1dc70298
+WRITE of size 8 at 0x602000234551 thread T0
+    #0 0x7fcbbd65f426 in __interceptor_memcpy /usr/src/debug/gcc/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:827
+    #1 0x55d2205f0c49 in cddraw wdg/code.h:644
+    #2 0x55d2205e6957 in wdgevent /home/steves/edit/confick/wdg.h:75
+    #3 0x55d2205e77c4 in wdgdraw /home/steves/edit/confick/wdgmgr.h:177
+    #4 0x55d2205e7b16 in wdgmgrdraw /home/steves/edit/confick/wdgmgr.h:194
+    #5 0x55d2205f4bbd in main /home/steves/edit/confick/main.c:186
+    #6 0x7fcbbd43c28f  (/usr/lib/libc.so.6+0x2328f)
+    #7 0x7fcbbd43c349 in __libc_start_main (/usr/lib/libc.so.6+0x23349)
+    #8 0x55d2205e6424 in _start ../sysdeps/x86_64/start.S:115
+
+0x602000234551 is located 0 bytes to the right of 1-byte region [0x602000234550,0x602000234551)
+allocated by thread T0 here:
+    #0 0x7fcbbd6bfa89 in __interceptor_malloc /usr/src/debug/gcc/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x55d2205eecd9 in cdputc wdg/code.h:353
+    #2 0x55d2205ec695 in cdopen wdg/code.h:42
+    #3 0x55d2205f4a54 in main /home/steves/edit/confick/main.c:178
+    #4 0x7fcbbd43c28f  (/usr/lib/libc.so.6+0x2328f)
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow /usr/src/debug/gcc/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:827 in __interceptor_memcpy
+Shadow bytes around the buggy address:
+  0x0c048003e850: fa fa fd fa fa fa 03 fa fa fa fd fa fa fa fd fa
+  0x0c048003e860: fa fa fd fa fa fa fd fa fa fa fd fa fa fa fd fa
+  0x0c048003e870: fa fa fd fa fa fa 00 fa fa fa fd fa fa fa 02 fa
+  0x0c048003e880: fa fa fd fa fa fa fd fa fa fa fd fa fa fa fd fa
+  0x0c048003e890: fa fa fd fa fa fa fd fa fa fa fd fa fa fa 00 fa
+=>0x0c048003e8a0: fa fa fd fa fa fa 02 fa fa fa[01]fa fa fa fd fa
+  0x0c048003e8b0: fa fa fd fa fa fa fd fa fa fa fd fa fa fa fd fa
+  0x0c048003e8c0: fa fa fd fa fa fa fd fa fa fa 00 fa fa fa fd fa
+  0x0c048003e8d0: fa fa fd fa fa fa fd fa fa fa 04 fa fa fa fd fa
+  0x0c048003e8e0: fa fa fd fa fa fa fd fa fa fa fd fa fa fa fd fa
+  0x0c048003e8f0: fa fa fd fa fa fa fd fa fa fa fd fa fa fa fd fd
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==233157==ABORTING

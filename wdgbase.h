@@ -54,27 +54,11 @@ Widget wdgmgrgetfocus(void);
 void wdgmgrfocusnext(void);
 void wdgmgrrotate(void);
 
-// set if the token can fuse with a token of the same type
-#define TTFUSE 0x10
-// set if the token uses the str variable (otherwise it's none or c)
-#define TTUSESTR 0x20
-
-#define TTNONE 0
-#define TTNEWLINE (1|TTFUSE)
-#define TTSPACE (2|TTFUSE)
-#define TTINDENT (3|TTFUSE)
-#define TTNUMBER (4|TTFUSE|TTUSESTR)
-#define TTWORD (5|TTFUSE|TTUSESTR)
-
-typedef struct codetoken {
-	int type;
-	union {
-		int c;
-		char *str;
-	};
-	size_t len;
-	struct codetoken *prev, *next;
-} *CodeToken;
+typedef struct codeblock {
+	char buf[2048];
+	int len;
+	struct codeblock *prev, *next;
+} *CodeBlock;
 
 // c flavor
 enum {
@@ -96,8 +80,8 @@ typedef struct code {
 	char *fileName;
 	int scrollX, scrollY;
 	int relCurX, relCurY;
-	CodeToken first;
-	CodeToken cur;
+	CodeBlock first;
+	CodeBlock cur;	
 	size_t cursor;
 } *CodeWidget;
 
