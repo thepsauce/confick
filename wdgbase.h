@@ -57,6 +57,7 @@ void wdgmgrrotate(void);
 typedef struct codeblock {
 	char buf[2048];
 	int len;
+	int height; // number of new line characters inside this block
 	struct codeblock *prev, *next;
 } *CodeBlock;
 
@@ -73,13 +74,12 @@ enum {
 	C_PAIR_FUNCTION,
 	C_PAIR_PREPROC1,
 	C_PAIR_PREPROC2,
-	C_PAIR_CHAR,
+	C_PAIR_ERROR,
 };
 typedef struct code {
 	_WIDGET_HEADER;
 	char *fileName;
 	int scrollX, scrollY;
-	int relCurX, relCurY;
 	CodeBlock first;
 	CodeBlock cur;	
 	size_t cursor;
