@@ -80,6 +80,7 @@ typedef struct code {
 	_WIDGET_HEADER;
 	char *fileName;
 	int scrollX, scrollY;
+	int visCurX;
 	CodeBlock first;
 	CodeBlock cur;	
 	size_t cursor;

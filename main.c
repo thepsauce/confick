@@ -2,7 +2,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include <ncurses.h>
+#include <curses.h>
 #include <stdio.h>
 
 #define ARRLEN(a) (sizeof(a)/sizeof*(a))
@@ -80,6 +80,7 @@ int main(int argc, char **argv)
 	init_pair(C_PAIR_FUNCTION, COLOR_BLUE, COLOR_BLACK);
 	init_pair(C_PAIR_PREPROC1, COLOR_RED, COLOR_BLACK);
 	init_pair(C_PAIR_ERROR, COLOR_WHITE, COLOR_RED);
+
 
 	Widgetclass wc;
 	void tmp_close(Widget wdg)

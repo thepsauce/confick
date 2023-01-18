@@ -89,13 +89,86 @@ void cdright(CodeWidget cd)
 
 void cdup(CodeWidget cd)
 {
-	if(cd->scrollY)
-		cd->scrollY--;
+	CodeBlock block;
+	char *buf;
+	int index;
+	int x;
+
+	cdhome(cd);
+	if(cd->cursor)
+		cd->cursor--;
+	else if(cd->cur->prev)
+	{
+		cd->cur = cd->cur->prev;
+		cd->cursor = cd->cur->len - 1; 
+	}
+	cdhome(cd);
+	index = cd->cursor;
+	block = cd->cur;
+	x = 0;
+	for(block = cd->cur; block; block = block->prev, index = 0)
+	{
+		for(buf = block->buf + index; index != cd->cur->len; index++, buf++)
+		{
+			switch(*buf)
+			{
+			case '\t':
+				x += 4;
+				break;
+			case '\n': 
+				goto end;
+			default:
+				x++;
+			}
+			if(x > cd->visCurX)
+				goto end;
+		}
+	}
+end:
+	cd->cur = block;
+	cd->cursor = index;
 }
 
 void cddown(CodeWidget cd)
 {
-	cd->scrollY++;
+	CodeBlock block;
+	char *buf;
+	int index;
+	int x;
+
+	cdend(cd);
+	if(cd->cursor < cd->cur->len)
+		cd->cursor++;
+	else if(cd->cur->next)
+	{
+		cd->cur = cd->cur->next;
+		cd->cursor = 0; 
+	}
+	cdhome(cd);
+	index = cd->cursor;
+	block = cd->cur;
+	x = 0;
+	for(block = cd->cur; block; block = block->prev, index = 0)
+	{
+		for(buf = block->buf + index; index != cd->cur->len; index++, buf++)
+		{
+			switch(*buf)
+			{
+			case '\t':
+				x += 4;
+				break;
+			case '\n': 
+				goto end;
+			default:
+				x++;
+			}
+			if(x > cd->visCurX)
+				goto end;
+		}
+	}
+end:
+	cd->cur = block;
+	cd->cursor = index;
 }
 
 void cdhome(CodeWidget cd)
@@ -189,7 +262,7 @@ void cddelete(CodeWidget cd)
 			{
 				memset(block, 0, sizeof*block);
 			}
-	}
+		}
 		else
 		{
 			if(block->buf[cd->cursor] == '\n')
@@ -369,7 +442,7 @@ void cddraw(CodeWidget cd)
 	if(!cd->first->len)
 		return;
 	attron(COLOR_PAIR(C_PAIR_TEXT));
-	// find the first blocken that is within a visible region
+	// find the first block that is within a visible region
 #define NEXTCHAR \
 	prevC = c; \
 	c = buf[0]; \
@@ -622,24 +695,18 @@ void cddraw(CodeWidget cd)
 			{
 		exponential_render:
 				NEXTCHAR;
-				mvaddch(y, x, c);
-				mvchgat(y, x, 1, 0, C_PAIR_NUMBER, NULL);
-				x++;
+				mvaddch(y, x++, c | COLOR_PAIR(C_PAIR_NUMBER));
 				startX = x;
 				if(nextC == '-')
 				{
 					NEXTCHAR;
-					mvaddch(y, x, c);
-					mvchgat(y, x, 1, 0, C_PAIR_NUMBER, NULL);
-					x++;
+					mvaddch(y, x++, c | COLOR_PAIR(C_PAIR_NUMBER));
 					startX = x;
 				}
 				while(isdigit(nextC))
 				{
 					NEXTCHAR;
-					mvaddch(y, x, c);
-					mvchgat(y, x, 1, 0, C_PAIR_NUMBER, NULL);
-					x++;
+					mvaddch(y, x++, c | COLOR_PAIR(C_PAIR_NUMBER));
 				}
 				if(startX == x)
 					mvchgat(y, x - 1, 1, 0, C_PAIR_ERROR, NULL);
@@ -647,9 +714,7 @@ void cddraw(CodeWidget cd)
 			if(nextC == 'l' || nextC == 'L' || nextC == 'f' || nextC == 'F' || nextC == 'd' || nextC == 'D')
 			{
 				NEXTCHAR;
-				mvaddch(y, x, c);
-				mvchgat(y, x, 1, 0, C_PAIR_NUMBER, NULL);
-				x++;
+				mvaddch(y, x++, c | COLOR_PAIR(C_PAIR_NUMBER));
 			}
 			break;
 		case '\n':
@@ -674,10 +739,9 @@ void cddraw(CodeWidget cd)
 				for(int i = 0; i < ARRLEN(tChars); i++)
 					if(nextC == tChars[i])
 					{
-						move(y, x);
-						addch('\\');
+						mvaddch(y, x, '\\');
 						NEXTCHAR;
-						addch(c);
+						mvaddch(y, x, c);
 						if(tChars[i] == 'x')
 						{
 							for(int i = 2; i <= 3; i++)
@@ -689,7 +753,7 @@ void cddraw(CodeWidget cd)
 									goto render_done;
 								}
 								NEXTCHAR;
-								addch(c);
+								mvaddch(y, x, c);
 							}	
 							mvchgat(y, x, 4, 0, C_PAIR_STRING2, NULL);
 							x += 4;
@@ -705,7 +769,7 @@ void cddraw(CodeWidget cd)
 									goto render_done;
 								}
 								NEXTCHAR;
-								addch(c);
+								mvaddch(y, x, c);
 							}	
 							mvchgat(y, x, 6, 0, C_PAIR_STRING2, NULL);
 							x += 6;
@@ -715,18 +779,15 @@ void cddraw(CodeWidget cd)
 							mvchgat(y, x, 2, 0, C_PAIR_STRING2, NULL);
 							x += 2;
 						}
+						c = prevC = 0; // pretend there was no previous char
 						goto render_done;
 					}
 				if(nextC == '\n')
 				{
-					mvaddch(y, x, '\\');
-					mvchgat(y, x, 1, 0, C_PAIR_STRING2, NULL);
-					x++;
+					mvaddch(y, x++, '\\' | COLOR_PAIR(C_PAIR_STRING2));
 					goto render_done;
 				}
-				mvaddch(y, x, '\\');
-				mvchgat(y, x, 1, 0, C_PAIR_ERROR, NULL);
-				x++;
+				mvaddch(y, x++, '\\' | COLOR_PAIR(C_PAIR_ERROR));
 				goto render_done;
 			}
 		default:
@@ -828,4 +889,5 @@ void cddrawcursor(CodeWidget cd)
 		}
 	}
 	move(y, x);
+	cd->visCurX = x;
 }
