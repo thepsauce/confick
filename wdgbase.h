@@ -1,65 +1,75 @@
 struct widget;
 
-typedef void (*motionproc)(struct widget *wdg);
+// #define OK 0 // curses.h already defines an OK with value 0
+#define WARN(msg, ...) ({ fprintf(stderr, "%s:%s:%d > %s\n", __FILE__, __FUNCTION__, __LINE__, (msg)); 1; __VA_ARGS__; })
+#define ERROR(msg, ...) ({ fprintf(stderr, "%s:%s:%d > %s\n", __FILE__, __FUNCTION__, __LINE__, (msg)); exit(-1); -1; __VA_ARGS__; })
 
-typedef struct motion {
-	int id;
-	motionproc motion;
-} *Motion;
+typedef int (*eventproc_t)(struct widget *wdg, int eId);
 
-typedef void (*eventproc)(struct widget *wdg, int eId);
-
-struct insets {
-	int left, top, right, bottom;
-};
-
-typedef struct widgetclass {
+#define BASECREATED (1<<1)
+#define BASENAME (1<<2)
+#define BASESIZE (1<<3)
+#define BASEPROC (1<<4)
+#define BASECOMPLETE (BASECREATED|BASENAME|BASESIZE|BASEPROC)
+typedef struct base {
+	int flags;
 	char *name;
 	size_t size;
-	eventproc proc;
-	struct insets insets;
-	int motionCnt;
-	struct motion motions[0];
-} *Widgetclass;
+	eventproc_t proc;
+} *base_t;
 
-void wdgaddclass(Widgetclass wdgcls);
-Widgetclass wdgfindclass(const char *name);
+base_t bscreate(void);
+int bsname(base_t base, const char *name);
+int bssize(base_t base, size_t size);
+int bsproc(base_t base, eventproc_t proc);
+base_t bsfind(const char *name);
 
-#define _WIDGET_HEADER Widgetclass wc; \
+#define _WIDGET_HEADER base_t base; \
 	int flags; \
-	int x, y, width, height; \
+	WINDOW *window; \
 	struct widget *prevFocus, *nextFocus; \
 	struct widget *parent, *prev, *next, *child
 
 typedef struct widget {
 	_WIDGET_HEADER;
-} *Widget;
+} *widget_t;
 
-Widget wdgcreate(const char *clsName);
-void wdgfree(Widget wdg);
+widget_t wdgcreate(const char *bsName, int flags);
+int wdgfree(widget_t wdg);
 #define WDGINIT (-1)
 #define WDGUNINIT (-2)
 #define WDGDRAW (-3)
 #define WDGDRAWCURSOR (-4)
 #define WDGDEFAULT (-5)
-void wdgevent(Widget wdg, int eId);
+int wdgevent(widget_t wdg, int eId);
 
 // widget manager
 void wdgmgrdiscard(void);
 void wdgmgrupdate(int szX, int szY);
 void wdgmgrdraw(void);
-void wdgmgradd(Widget wdg);
-void wdgmgrremove(Widget wdg);
-Widget wdgmgrgetfocus(void);
+void wdgmgradd(widget_t wdg);
+void wdgmgrremove(widget_t wdg);
+widget_t wdgmgrgetfocus(void);
 void wdgmgrfocusnext(void);
 void wdgmgrrotate(void);
 
-typedef struct codeblock {
-	char buf[2048];
-	int len;
-	int height; // number of new line characters inside this block
-	struct codeblock *prev, *next;
-} *CodeBlock;
+// line text system
+typedef struct line {
+	int flags;
+	char *buf;
+	int nBuf, szBuf;
+} line_t;
+
+#define TXFLINECROSSING (1<<1)
+typedef struct text {
+	int flags;
+	char *fileName;
+	struct {
+		int x, y;
+	} cursor;
+	line_t *lines;
+	int nLines, szLines;
+} text_t;
 
 // c flavor
 enum {
@@ -75,82 +85,17 @@ enum {
 	C_PAIR_PREPROC1,
 	C_PAIR_PREPROC2,
 	C_PAIR_ERROR,
+
+	CD_PAIR_EMPTY_LINE_PREFIX,
 };
+#define CDFSHOWLINES (1<<1)
+#define CDFSHOWSTATUS (1<<2)
 typedef struct code {
 	_WIDGET_HEADER;
-	char *fileName;
-	int scrollX, scrollY;
-	int visCurX;
-	CodeBlock first;
-	CodeBlock cur;	
-	size_t cursor;
-} *CodeWidget;
-
-void cdclear(CodeWidget cd);
-void cdmove(CodeWidget cd, int x, int y);
-void cdputc(CodeWidget cd, int c);
-
-typedef struct line {
-	int flags;
-	char *buf;
-	int len, cap;
-} *Line;
-
-#define TXTABWIDTH 4
-#define TXCLEARKEEPTHRESHOLD 64
-typedef struct text {
-	_WIDGET_HEADER;
-	char *fileName;
-	int scrollX, scrollY;
-	int curX, curY;
-	Line lines;
-	int lineCnt, lineCap;
-} *TextWidget;
-
-// clears the text area
-void txclear(TextWidget tx);
-// moves the cursor
-void txmove(TextWidget tx, int x, int y);
-// deletes char at cursor
-void txdelc(TextWidget tx);
-// puts char at cursor
-void txputc(TextWidget tx, int c);
-// puts string at cursor (untested and unused function)
-void txputs(TextWidget tx, const char *s);
-// clears all text and replaces it with given file
-void txopen(TextWidget tx, const char *fileName);
-// saves all text to file
-void txsave(TextWidget tx);
-// breaks the line at the cursor
-void txbreak(TextWidget tx);
-
-// these functions are incomplete, don't call them with out extra supporting structures
-// returns the index of the char under the given visible cursor x 
-int _txshiftvisx(TextWidget tx, int visX, int y);
-// returns the x coordinate of the visible cursor x
-int _txviscurx(TextWidget tx, int x, int y);
-// inserts a new line at the end of the text that is UNitialized
-void _txgrow(TextWidget tx);
-// sets the line capacity to cap
-void _txgrowline(Line line, int to);
-// inserts a char at given index
-void _txinsertchar(Line line, int index, int c);
-// inserts a string at given index with given length
-void _txinsertnstr(Line line, int index, const char *s, int n);
-// deletes character at given index coordinates
-void _txdelete(TextWidget tx, int x, int y);
-// returns the end of the line of this raw string
-const char *_txlinesep(const char *s);
-// returns the length of the line separator (\r, \n, \r\n)
-int _txlineseplen(const char *s);
-// gets the number of spaces in front of a line
-int _txunitspacing(TextWidget tx, int y);
+	text_t text;
+} *code_t;
 
 typedef struct console {
 	_WIDGET_HEADER;
-	char *_padding1;
-	int scrollX, scrollY;
-	int curX, curY;
-	Line lines;
-	int lineCnt, lineCap;
-} *ConsoleWidget;
+	text_t text;
+} *console_t;

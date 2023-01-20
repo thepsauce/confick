@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <curses.h>
 #include <stdio.h>
+#include <math.h>
 
 #define ARRLEN(a) (sizeof(a)/sizeof*(a))
 
@@ -22,21 +23,17 @@
 })
 
 #include "wdgbase.h"
-
 #include "wdg.h"
 #include "wdgmgr.h"
-#include "wdg/console.h"
-#include "wdg/text.h"
-#include "wdg/code.h"
+#include "text.h"
+#include "wdg/code_.h"
 
 #define CURSEDRGB(color) ((color>>16)&0xFF)*1000/256, ((color>>8)&0xFF)*1000/256, (color&0xFF)*1000/256
 
-int main(int argc, char **argv)
+int 
+main(int argc, 
+		char **argv)
 {
-	Widget wdg, parent;
-	int szX, szY;
-	int c;
-
 	initscr();
 
 	if(!has_colors())
@@ -81,132 +78,41 @@ int main(int argc, char **argv)
 	init_pair(C_PAIR_PREPROC1, COLOR_RED, COLOR_BLACK);
 	init_pair(C_PAIR_ERROR, COLOR_WHITE, COLOR_RED);
 
+	init_pair(CD_PAIR_EMPTY_LINE_PREFIX, COLOR_CYAN, COLOR_BLACK);
 
-	Widgetclass wc;
-	void tmp_close(Widget wdg)
-	{
-		// wdgmgrremove(wdg);
-		wdgfree(wdg);
-	}
-	struct motion txMotions[] = {
-		{ WDGINIT, (motionproc) txinit },
-		{ WDGUNINIT, (motionproc) txuninit },
-		{ WDGDRAW, (motionproc) txdraw },
-		{ WDGDRAWCURSOR, (motionproc) txdrawcursor },
-		{ KEY_LEFT, (motionproc) txleft },
-		{ KEY_UP, (motionproc) txup },
-		{ KEY_RIGHT, (motionproc) txright },
-		{ KEY_DOWN, (motionproc) txdown },
-		{ KEY_DC, (motionproc) txdelete },
-		{ KEY_BACKSPACE, (motionproc) txbackdelete },
-		{ KEY_F(2), (motionproc) txsave },
-		{ 'w' - ('a' - 1), (motionproc) tmp_close },
-		{ KEY_END, (motionproc) txend },
-		{ KEY_HOME, (motionproc) txhome },
-	};
-	wc = malloc((sizeof*wc) + (sizeof txMotions));
-	wc->name = strdup("Text");
-	wc->size = sizeof(struct text);
-	wc->proc = (eventproc) txevent;
-	wc->insets = (struct insets) { 5, 0, 0, 1 };
-	wc->motionCnt = ARRLEN(txMotions);
-	memcpy(wc->motions, txMotions, sizeof txMotions);
-	wdgaddclass(wc);
+	base_t base;
+	base = bscreate();
+	bsname(base, "Code");
+	bssize(base, sizeof(struct code));
+	bsproc(base, cdproc);
 
-	struct motion consoleMotions[] = {
-		{ WDGINIT, (motionproc) txinit },
-		{ WDGUNINIT, (motionproc) txuninit },
-		{ WDGDRAW, (motionproc) csdraw },
-		{ WDGDRAWCURSOR, (motionproc) txdrawcursor },
-		{ KEY_LEFT, (motionproc) csleft },
-		{ KEY_UP, (motionproc) csup },
-		{ KEY_RIGHT, (motionproc) csright },
-		{ KEY_DOWN, (motionproc) csdown },
-		{ KEY_HOME, (motionproc) cshome },
-		{ KEY_END, (motionproc) csend },
-		{ KEY_DC, (motionproc) csdelete },
-		{ KEY_BACKSPACE, (motionproc) csbackdelete },
-		{ '\n', (motionproc) csenter },
-	};
-	wc = malloc((sizeof*wc) + (sizeof consoleMotions));
-	wc->name = strdup("Console");
-	wc->size = sizeof(struct console);
-	wc->proc = (eventproc) csevent;
-	wc->insets = (struct insets) { 0, 0, 0, 0 };
-	wc->motionCnt = ARRLEN(consoleMotions);
-	memcpy(wc->motions, consoleMotions, sizeof consoleMotions);
-	wdgaddclass(wc);
-
-	struct motion codeMotions[] = {
-		{ WDGINIT, (motionproc) cdinit },
-		{ WDGUNINIT, (motionproc) cduninit },
-		{ WDGDRAW, (motionproc) cddraw },
-		{ WDGDRAWCURSOR, (motionproc) cddrawcursor },
-		{ KEY_LEFT, (motionproc) cdleft },
-		{ KEY_RIGHT, (motionproc) cdright },
-		{ KEY_UP, (motionproc) cdup },
-		{ KEY_DOWN, (motionproc) cddown },
-		{ KEY_DC, (motionproc) cddelete },
-		{ KEY_BACKSPACE, (motionproc) cdbackdelete },
-		{ KEY_HOME, (motionproc) cdhome },
-		{ KEY_END, (motionproc) cdend },
-	};
-	wc = malloc((sizeof*wc) + (sizeof codeMotions));
-	wc->name = strdup("Code");
-	wc->size = sizeof(struct code);
-	wc->proc = (eventproc) cdputc;
-	wc->insets = (struct insets) { 0, 0, 0, 0 };
-	wc->motionCnt = ARRLEN(codeMotions);
-	memcpy(wc->motions, codeMotions, sizeof codeMotions);
-	wdgaddclass(wc);
-
-	parent = wdgcreate(NULL);
-	for(int t = 1; t < argc; t++)
-	{
-		wdg = wdgcreate("Text");
-		txopen((TextWidget) wdg, argv[t]);
-		wdgattach(wdg, parent);
-	}
-	if(argc == 1)
-	{
-		wdg = wdgcreate("Text");
-		wdgattach(wdg, parent);
-	}
-	wdgattach(parent, NULL);
-
-	wdg = wdgcreate("Code");
-	if(argc > 1)
-		cdopen((CodeWidget) wdg, argv[1]);
+	widget_t wdg;
+	wdg = wdgcreate("Code", CDFSHOWLINES);
 	wdgattach(wdg, NULL);
-
-	do
+	
+	while(1)
 	{
+		int szX, szY;
+		int c;
+
 		getmaxyx(stdscr, szY, szX);
 		wdgmgrupdate(szX, szY);
 		erase();
 		wdgmgrdraw();
+		wrefresh(wdg->window);
 		refresh();
 		c = getch();
 		switch(c)
 		{
-		case 'f' - ('a' - 1):
-			if(Focus->nextFocus)
-				Focus = Focus->nextFocus;
-			else
-			{
-				while(Focus->prevFocus)
-					Focus = Focus->prevFocus;
-			}
-			continue;
-		case 'r' - ('a' - 1):
-			//wdgmgrrotate();		
-			break;
 		case 'q' - ('a' - 1):
-			wdgmgrdiscard();		
-			continue;
+			wdgmgrdiscard();
+			break;
+		default:
+			if((wdg = wdgmgrgetfocus()))
+				wdgevent(wdg, c);
 		}
-		if((wdg = wdgmgrgetfocus()))
-			wdgevent(wdg, c);
-	} while(1);
+	}
+
+	endwin();
 	return 0;
 }

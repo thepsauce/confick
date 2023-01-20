@@ -1,11 +1,16 @@
-Widget FirstWidget;
-Widget Focus;
+widget_t FirstWidget;
+widget_t Focus;
 int SizeX, SizeY;
 
-void wdgattach(Widget wdg, Widget parent)
+int
+wdgattach(widget_t wdg, 
+		widget_t parent)
 {
-	Widget last;
+	widget_t last;
 	
+	if(!wdg)
+		return ERROR("widget is null");
+
 	wdg->parent = parent;
 	if(!parent)
 	{
@@ -29,19 +34,22 @@ void wdgattach(Widget wdg, Widget parent)
 			last->next = wdg;
 		}
 	}
-	if(wdg->wc->name[0] == '#')
-		return;
 	if(Focus)
 	{
 		wdg->nextFocus = Focus;
 		Focus->prevFocus = wdg;
 	}
 	Focus = wdg;
+	return OK;
 }
 
-void wdgdetach(Widget wdg)
+int
+wdgdetach(widget_t wdg)
 {
-	Widget parent;
+	widget_t parent;
+
+	if(!wdg)
+		return ERROR("widget is null");
 
 	parent = wdg->parent;
 	wdg->parent = NULL;
@@ -51,15 +59,20 @@ void wdgdetach(Widget wdg)
 		wdg->prev->next = wdg->next;
 	if(wdg->next)
 		wdg->next->prev = wdg->prev;
+	return OK;
 }
 
-void _wdgmgrrelayout(Widget wdg, int minX, int minY, int maxWidth, int maxHeight)
+void
+_wdgmgrrelayout(widget_t wdg,
+		int minX, 
+		int minY, 
+		int maxWidth, 
+		int maxHeight)
 {
 	int x, y, w, h;
 	int cnt;
 	int dir;
-	Widget first, next;
-	struct insets insets;
+	widget_t first, next;
 	int layout;
 
 	if(!wdg)
@@ -71,11 +84,10 @@ void _wdgmgrrelayout(Widget wdg, int minX, int minY, int maxWidth, int maxHeight
 	}
 	else
 	{
-		insets = wdg->wc->insets;
-		wdg->x = minX + insets.left;
-		wdg->y = minY + insets.top;
-		wdg->width = maxWidth - insets.left - insets.right;
-		wdg->height = maxHeight - insets.top - insets.bottom;
+		wdg->window->_begx = minX;
+		wdg->window->_begy = minY;
+		wdg->window->_begx = minX + maxWidth;
+		wdg->window->_begy = minY + maxHeight;
 		if(!wdg->child)
 			return;
 		first = wdg->child;
@@ -121,7 +133,9 @@ void _wdgmgrrelayout(Widget wdg, int minX, int minY, int maxWidth, int maxHeight
 	}
 }
 
-void wdgmgrupdate(int szX, int szY)
+void 
+wdgmgrupdate(int szX, 
+		int szY)
 {
 	if(SizeX == szX || SizeY == szY)
 		return;
@@ -130,9 +144,10 @@ void wdgmgrupdate(int szX, int szY)
 	_wdgmgrrelayout(NULL, 0, 0, SizeX - 1, SizeY - 1);
 }
 
-void wdgmgrdiscard(void)
+void 
+wdgmgrdiscard(void)
 {
-	Widget wdg, prev, parent;
+	widget_t wdg, prev, parent;
 
 	wdg = FirstWidget;
 	while(1)
@@ -168,20 +183,19 @@ void wdgmgrdiscard(void)
 	exit(0);
 }
 
-void wdgdraw(Widget wdg)
+void
+wdgdraw(widget_t wdg)
 {
-	Widget child;
+	widget_t child;
 	int cnt;
 
 again:
 	wdgevent(wdg, WDGDRAW);
 	for(child = wdg->child; child; child = child->next)
 		wdgevent(child,  WDGDRAW);
-	attron(A_DIM | COLOR_PAIR(3));
 	for(child = wdg->child; child; child = child->next)
-	for(int y = 0; y <= wdg->height; y++)
-		mvaddch(wdg->y + y, child->x + child->width + 1, ' ');
-	attroff(A_DIM | COLOR_PAIR(3));
+	for(int y = 0, h = 0 /* TODO */; y <= h; y++)
+		;//mvaddch(wdg->y + y, child->x + child->width + 1, ' ' | A_DIM | COLOR_PAIR(3));
 	if(wdg->next)
 	{
 		wdg = wdg->next;
@@ -189,13 +203,15 @@ again:
 	}
 }
 
-void wdgmgrdraw(void)
+void
+wdgmgrdraw(void)
 {
 	wdgdraw(FirstWidget);
 	wdgevent(Focus, WDGDRAWCURSOR);
 }
 
-Widget wdgmgrgetfocus(void)
+widget_t
+wdgmgrgetfocus(void)
 {
 	return Focus;
 }
