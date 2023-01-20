@@ -26,7 +26,7 @@
 #include "wdg.h"
 #include "wdgmgr.h"
 #include "text.h"
-#include "wdg/code_.h"
+#include "wdg/code.h"
 
 #define CURSEDRGB(color) ((color>>16)&0xFF)*1000/256, ((color>>8)&0xFF)*1000/256, (color&0xFF)*1000/256
 
