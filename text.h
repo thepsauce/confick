@@ -226,6 +226,9 @@ txbreak(text_t *text)
 	memcpy(lines[iLine].buf, tail, nTail);
 
 	text->nLines = nLines;
+
+	text->cursor.y = iLine;
+	text->cursor.x = 0;
 	return OK;
 }
 
@@ -245,6 +248,7 @@ txadd(text_t *text,
 	index = text->cursor.x;
 	if(ch == '\n')
 		return txbreak(text);
+	text->cursor.x++;
 	return lnadd(&lines[iLine], index, ch);
 }
 
@@ -295,21 +299,21 @@ txaddstr(text_t *text,
 int
 txremove(text_t *text)
 {
-	line_t *line, *nextLine;
 	int nLines;
-	int index;
 	int iLine;
+	int index;
+	line_t *line, *nextLine;
 
 	if(!text)
 		return ERROR("text is null");
 
-	iLine = text->cursor.y;
-	line = text->lines;
 	nLines = text->nLines;
+	iLine = text->cursor.y;
 	index = text->cursor.x;
+	line = text->lines + iLine;
 	if(index == line->nBuf)
 	{
-		if(iLine + 1 != nLines)
+		if(iLine + 1 != nLines && (text->flags & TXFLINECROSSING))
 		{
 			nextLine = line + 1;
 			lnaddnstr(line, line->nBuf, nextLine->buf, nextLine->nBuf);
@@ -326,6 +330,12 @@ txremove(text_t *text)
 		memmove(line->buf + index, line->buf + index + 1, line->nBuf - index);
 	}
 	return OK;
+}
+
+int
+txleftremove(text_t *text)
+{
+	return !txleft(text) && !txremove(text);
 }
 
 int

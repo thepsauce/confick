@@ -5,6 +5,7 @@
 #include <curses.h>
 #include <stdio.h>
 #include <math.h>
+#include <limits.h>
 
 #define ARRLEN(a) (sizeof(a)/sizeof*(a))
 
@@ -25,8 +26,10 @@
 #include "wdgbase.h"
 #include "wdg.h"
 #include "wdgmgr.h"
+#include "syntax.h"
 #include "text.h"
-#include "wdg/code_.h"
+#include "wdg/code.h"
+#include "rwl.h"
 
 #define CURSEDRGB(color) ((color>>16)&0xFF)*1000/256, ((color>>8)&0xFF)*1000/256, (color&0xFF)*1000/256
 
@@ -84,10 +87,14 @@ main(int argc,
 	base = bscreate();
 	bsname(base, "Code");
 	bssize(base, sizeof(struct code));
-	bsproc(base, cdproc);
+	bsproc(base, (eventproc_t) cdproc);
 
 	widget_t wdg;
 	wdg = wdgcreate("Code", CDFSHOWLINES);
+	syntax_t syntax;
+	syntax = syncreate(COLOR_PAIR(C_PAIR_TEXT));
+	rwlcompile("C.rwl", syntax);
+	cdsetsyntax((code_t) wdg, syntax);
 	wdgattach(wdg, NULL);
 	
 	while(1)
@@ -99,7 +106,7 @@ main(int argc,
 		wdgmgrupdate(szX, szY);
 		erase();
 		wdgmgrdraw();
-		wrefresh(wdg->window);
+		//wrefresh(wdg->window);
 		refresh();
 		c = getch();
 		switch(c)

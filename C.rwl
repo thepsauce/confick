@@ -1,0 +1,65 @@
+"a-zA-Z_$" -> word
+"0" -> zero
+"1-9" -> mayFloat
+"." -> float
+"\"" -> string
+
+word:
+	"a-zA-Z_$0-9" -> word
+
+zero:
+	"xX" -> hex
+	"0-7" -> octal
+	"bB" -> binary
+	"." -> float
+	"e" -> exp
+	"uU" -> intSuffixU
+	"lL" -> intSuffixL
+	intSuffixU:
+		"lL" -> intSuffixL	
+	intSuffixL:
+		"lL" -> $
+	hex:
+		"0-9a-fA-F" -> hex
+		"uU" -> intSuffixU
+		"lL" -> intSuffixL	
+	octal:
+		"0-7" -> octal
+		"uU" -> intSuffixU
+		"lL" -> intSuffixL	
+	binary:
+		"01" -> binary
+		"uU" -> intSuffixU
+		"lL" -> intSuffixL	
+	float:
+		"0-9" -> float
+		"e" -> exp
+		"fFlL" -> $
+		exp:
+			"-" -> nonNegExp
+			"0-9" -> nonNegExp
+			"fFlL" -> $
+			nonNegExp:
+				"0-9" -> nonNegExp
+				"fFlL" -> $
+string:
+	"\"" -> $
+	"\\" -> escape
+	"\n" -> $
+	$ -> string
+	escape:
+		"abefnrtv\"\'\\" -> string
+		"x" -> escapeX
+		"u" -> escapeU
+		escapeX:
+			"0-9a-fA-F" -> escapeX2
+			escapeX2:
+				"0-9a-fA-F" -> $
+		escapeU:
+			"0-9a-fA-F" -> escapeU2
+			escapeU2:
+				"0-9a-fA-F" -> escapeU3
+				escapeU3:
+						"0-9a-fA-F" -> escapeU4
+						escapeU4:
+							"0-9a-fA-F" -> $

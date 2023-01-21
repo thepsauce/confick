@@ -41,7 +41,7 @@ int wdgfree(widget_t wdg);
 #define WDGDRAW (-3)
 #define WDGDRAWCURSOR (-4)
 #define WDGDEFAULT (-5)
-int wdgevent(widget_t wdg, int eId);
+int wdgevent(widget_t wdg, int c);
 
 // widget manager
 void wdgmgrdiscard(void);
@@ -70,6 +70,7 @@ typedef struct text {
 	line_t *lines;
 	int nLines, szLines;
 } text_t;
+int txclear(text_t *text);
 
 // c flavor
 enum {
@@ -88,11 +89,42 @@ enum {
 
 	CD_PAIR_EMPTY_LINE_PREFIX,
 };
+
+typedef struct condition {
+	unsigned short set[16];
+} condition_t;
+condition_t conset(const char *str);
+condition_t condefault(void);
+condition_t connegate(condition_t con);
+condition_t conor(condition_t c1, condition_t c2);
+condition_t conand(condition_t c1, condition_t c2);
+condition_t conxor(condition_t c1, condition_t c2);
+
+typedef struct state {
+	struct {
+		condition_t condition;
+		struct state *nextState;
+	} *subStates;
+	int nSubStates, szSubStates;
+	chtype cht;
+} *state_t;
+state_t stacreate(chtype cht);
+int staaddstate(state_t parent, state_t child, condition_t condition);
+
+typedef struct syntax {
+	struct state initialState;
+	state_t currentState;
+} *syntax_t;
+syntax_t syncreate(chtype cht);
+state_t syninitialstate(syntax_t syntax);
+int synaddstate(syntax_t syntax, state_t state, condition_t condition);
+
 #define CDFSHOWLINES (1<<1)
 #define CDFSHOWSTATUS (1<<2)
 typedef struct code {
 	_WIDGET_HEADER;
 	text_t text;
+	syntax_t syntax;
 } *code_t;
 
 typedef struct console {

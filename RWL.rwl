@@ -1,0 +1,29 @@
+"a-zA-Z_" -> name
+"\"" -> string
+
+name:
+	"a-zA-Z0-9_" -> name
+	$ -> styleOrColon
+	styleOrColon:
+		" \t\n\v\f" -> stringOrInitial
+		"@" -> style
+		":" -> stringOrInitial
+		style:
+			"a-zA-Z0-9_" -> style
+			$ -> stringOrInitial
+		stringOrInitial:
+			" \t\n\v\f\r" -> stringOrInitial
+			"\"" -> string
+			string:
+				"\\" -> escapeStart
+				"\"" -> arrowStart
+				escapeStart:
+					"abefntv" -> string
+				arrowStart:
+					"-" -> arrowEnd	
+					arrowEnd:
+						">" -> jumpNameStart
+						jumpNameStart:
+							"a-zA-Z_" -> jumpName
+							jumpName:
+								"a-zA-Z_0-9" -> jumpName

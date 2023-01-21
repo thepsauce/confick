@@ -4,9 +4,20 @@ cdupdatecursor(code_t code)
 
 }
 
+int
+cdsetsyntax(code_t code, syntax_t syntax)
+{
+	if(!code || !syntax)
+		return ERROR(!code ? "code is null" : "syntax is null");
+	code->syntax = syntax;
+	return OK;
+}
+
 void
 cddraw(code_t code)
 {
+	syntax_t syntax;
+	chtype cht;
 	line_t *lines, line;
 	int nLines;
 	int iLine;
@@ -16,7 +27,10 @@ cddraw(code_t code)
 	bool showLines;
 	bool showStatus;
 	int num, nDigits;
-	char lineNumberBuf[2 + (int) log10((double) ((1ULL << (8 * sizeof(int))) - 1))];
+	char lineNumberBuf[2 + (int) log10((double) INT_MAX)];
+
+	syntax = code->syntax;
+	synreset(syntax);
 
 	lines = code->text.lines;
 	nLines = code->text.nLines;
@@ -43,8 +57,14 @@ cddraw(code_t code)
 			sprintf(lineNumberBuf, "%d", iLine + 1);
 			for(int i = 0, n = strlen(lineNumberBuf); i < n; i++)
 				mvaddch(y + iLine, x + nDigits - n + i, lineNumberBuf[i]);
-			
-
+			for(int i = 0, o = x + lOff; i < line.nBuf; i++)
+			{
+				cht = synfeed(syntax, line.buf[i]);
+				mvaddch(y + iLine, o, cht);
+				o++;
+			}
+			if(iLine + 1 < nLines)
+				synfeed(syntax, '\n');
 		}
 		else if(showLines)
 		{
@@ -56,7 +76,15 @@ cddraw(code_t code)
 void
 cddrawcursor(code_t code)
 {
-	move(code->text.cursor.y, code->text.cursor.x);
+	int nLines;
+	bool showLines;
+	int num, nDigits;
+	
+	nLines = code->text.nLines;
+	showLines = !!(code->flags & CDFSHOWLINES);
+	for(num = nLines, nDigits = 0; num; num /= 10, nDigits++);
+
+	move(code->text.cursor.y, code->text.cursor.x + showLines * (nDigits + 1));
 }
 
 int 
@@ -73,6 +101,8 @@ cdproc(code_t code,
 		{ KEY_DOWN, txdown },
 		{ KEY_HOME, txhome },
 		{ KEY_END, txend },
+		{ KEY_DC, txremove },
+		{ KEY_BACKSPACE, txleftremove },
 	};
 	switch(c)
 	{
