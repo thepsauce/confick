@@ -60,12 +60,20 @@ typedef struct line {
 	int nBuf, szBuf;
 } line_t;
 
+typedef struct cursor {
+	int minX, minY, maxX, maxY;
+	int x, y;
+} *cursor_t;
+int curmove(cursor_t cursor, int x, int y);
+int curputc(cursor_t cursor, int c);
+int curputs(cursor_t cursor, const char *n);
+
 #define TXFLINECROSSING (1<<1)
 typedef struct text {
 	int flags;
 	char *fileName;
 	struct {
-		int x, y;
+		int x, y;	
 	} cursor;
 	line_t *lines;
 	int nLines, szLines;
@@ -90,34 +98,24 @@ enum {
 	CD_PAIR_EMPTY_LINE_PREFIX,
 };
 
-typedef struct condition {
-	unsigned short set[16];
-} condition_t;
-condition_t conset(const char *str);
-condition_t condefault(void);
-condition_t connegate(condition_t con);
-condition_t conor(condition_t c1, condition_t c2);
-condition_t conand(condition_t c1, condition_t c2);
-condition_t conxor(condition_t c1, condition_t c2);
-
-typedef struct state {
-	struct {
-		condition_t condition;
-		struct state *nextState;
-	} *subStates;
-	int nSubStates, szSubStates;
-	chtype cht;
-} *state_t;
-state_t stacreate(chtype cht);
-int staaddstate(state_t parent, state_t child, condition_t condition);
+typedef struct {
+	char *name;
+	void *(*create)(void);
+	int (*destroy)(void *receiver);
+	int (*receive)(void *receiver, cursor_t cursor, int c);
+} *receiverbase_t;
+int recvaddbase(const char *name, void *(*create)(void), int (*destroy)(void *receiver), int (*receiver)(void *receiver, cursor_t cursor, int c));
+receiverbase_t recvgetbase(const char *name);
 
 typedef struct syntax {
-	struct state initialState;
-	state_t currentState;
+	receiverbase_t draw, input;
+	void *drawReceiver, *inputReceiver;
 } *syntax_t;
-syntax_t syncreate(chtype cht);
-state_t syninitialstate(syntax_t syntax);
-int synaddstate(syntax_t syntax, state_t state, condition_t condition);
+syntax_t syncreate(const char *nameReceiverDrawBase, const char *nameReceiverInputBase);
+int synfree(syntax_t syntax);
+#define SYNFEEDDRAW 1
+#define SYNFEEDINPUT 2
+int synfeed(syntax_t syntax, void *data, int r, int c);
 
 #define CDFSHOWLINES (1<<1)
 #define CDFSHOWSTATUS (1<<2)

@@ -1,139 +1,116 @@
-/* Condition */
-condition_t
-conset(const char *str)
+/* Cursor */
+int
+curmove(cursor_t cursor,
+		int x,
+		int y)
 {
-	condition_t condition;
-	memset(&condition, 0, sizeof condition);
+	if(!cursor)
+		return ERROR("cursor is null");
 
-	if(!str)
-		ERROR("string is null");
-
-	for(int c = 0, prev; prev = c, c = *str; str++)
-	{
-		if(c == '-' && prev && str[1])
-		{
-			str++;
-			for(int i = prev, n = *str; i <= n; i++)
-				condition.set[i >> 4] |= 1 << (i & 0xF);
-		}
-		else
-		{
-			condition.set[c >> 4] |= 1 << (c & 0xF);
-		}
-	}
-
-	return condition;
+	cursor->x = x;
+	cursor->y = y;
+	return OK;
 }
 
-condition_t
-consetbit(condition_t condition,
+int
+curputc(cursor_t cursor,
 		int c)
 {
-	condition.set[c >> 4] |= 1 << (c & 0xF);
-	return condition;
-}
-
-bool
-conisset(condition_t condition, int c)
-{
-	return condition.set[c >> 4] & (1 << (c & 0xF));
-}
-
-condition_t
-condefault(void)
-{
-	condition_t condition;
-	memset(&condition, 0xFF, sizeof condition);
-	return condition;
-}
-
-condition_t
-connegate(condition_t condition)
-{
-	for(int i = 0; i < ARRLEN(condition.set); i++)
-		condition.set[i] = ~condition.set[i];
-	return condition;
-}
-
-condition_t
-conor(condition_t c1, condition_t c2)
-{
-	for(int i = 0; i < ARRLEN(c1.set); i++)
-		c1.set[i] |= c2.set[i];
-	return c1;
-}
-
-condition_t
-conand(condition_t c1, condition_t c2)
-{
-	for(int i = 0; i < ARRLEN(c1.set); i++)
-		c1.set[i] &= c2.set[i];
-	return c1;
-}
-
-condition_t
-conxor(condition_t c1, condition_t c2)
-{
-	for(int i = 0; i < ARRLEN(c1.set); i++)
-		c1.set[i] ^= c2.set[i];
-	return c1;
-}
-
-/* State */
-state_t
-stacreate(chtype cht)
-{
-	state_t state;
-	state = malloc(sizeof*state);
-	if(!state)
-		return ERROR("out of memory", NULL);
-	memset(state, 0, sizeof*state);
-	state->cht = cht;
-	return state;
-}
-
-int
-stafree(state_t state)
-{
-	if(!state)
-		return ERROR("syntax is null");
-	free(state->subStates);
-	free(state);
-	return OK;
-}
-
-int
-staaddstate(state_t parent, state_t child, condition_t condition)
-{
-	if(!parent || !child)
-		return ERROR(!parent ? "parent is null" : "child is null");
-	
-	if(parent->nSubStates + 1 > parent->szSubStates)
+	if(!cursor)
+		return ERROR("cursor is null");
+	//iif(cursor->x >= cursor->minX && cursor->x <= cursor->maxY &&
+	//	cursor->y >= cursor->minY && cursor->y <= cursor->maxY)
+		mvaddch(cursor->y, cursor->x, c);
+	if(c == '\n')
 	{
-		parent->szSubStates *= 2;
-		parent->szSubStates++;
-		parent->subStates = realloc(parent->subStates, 
-				parent->szSubStates * sizeof*parent->subStates);
-		if(!parent->subStates)
-			return ERROR("out of memory");
+		cursor->y++;
+		cursor->x = cursor->minX;
 	}
-	parent->subStates[parent->nSubStates].condition = condition;;
-	parent->subStates[parent->nSubStates].nextState = child;
-	parent->nSubStates++;
+	else
+		cursor->x++;
 	return OK;
+}
+
+int
+curputs(cursor_t cursor,
+		const char *n)
+{
+	if(!cursor)
+		return ERROR("cursor is null");
+	// TODO
+	return OK;
+}
+
+/* Receiver */
+struct {
+	receiverbase_t *bases;
+	int n, sz;	
+} ReceiverBases;
+
+int
+recvaddbase(const char *name,
+		void *(*create)(void),
+		int (*destroy)(void *receiver),
+		int (*receive)(void *receive, cursor_t cursor, int c))
+{
+	receiverbase_t base;
+
+	if(!name)
+		return ERROR("name is null");
+	if(!create || !destroy || !receive)
+		return ERROR("a function is null");
+
+	base = malloc(sizeof*base);
+	if(!base)
+		return ERROR("out of memory");
+	if(ReceiverBases.n + 1 > ReceiverBases.sz)
+	{
+		ReceiverBases.sz *= 2;
+		ReceiverBases.sz++;
+		ReceiverBases.bases = realloc(ReceiverBases.bases, ReceiverBases.sz * sizeof*ReceiverBases.bases);
+		if(!ReceiverBases.bases)
+		{
+			free(base);
+			return ERROR("out of memory");
+		}
+	}
+	ReceiverBases.bases[ReceiverBases.n++] = base;
+	base->name = strdup(name);
+	base->create = create;
+	base->destroy = destroy;
+	base->receive = receive;
+	return OK;
+}
+
+receiverbase_t recvgetbase(const char *name)
+{
+	for(int i = 0; i < ReceiverBases.n; i++)
+		if(!strcmp(ReceiverBases.bases[i]->name, name))
+			return ReceiverBases.bases[i];
+	return WARN("base was not found", NULL);
 }
 
 /* Syntax */
 syntax_t
-syncreate(chtype cht)
+syncreate(const char *nameReceiverDrawBase, 
+		const char *inputReceiverDrawBase)
 {
 	syntax_t syntax;
+
 	syntax = malloc(sizeof*syntax);
 	if(!syntax)
 		return ERROR("out of memory", NULL);
 	memset(syntax, 0, sizeof*syntax);
-	syntax->initialState.cht = cht;
-	syntax->currentState = &syntax->initialState;
+	if(!(syntax->draw = recvgetbase(nameReceiverDrawBase)))
+	{
+		free(syntax);
+		return ERROR("invalid name for draw receiver", NULL);
+	}
+	if(!(syntax->input = recvgetbase(inputReceiverDrawBase)))
+	{
+		free(syntax);
+		return ERROR("invalid name for input receiver", NULL);
+	}
 	return syntax;
 }
 
@@ -142,68 +119,42 @@ synfree(syntax_t syntax)
 {
 	if(!syntax)
 		return ERROR("syntax is null");
-	free(syntax->initialState.subStates);
+	if(syntax->drawReceiver)
+		syntax->draw->destroy(syntax->drawReceiver);
+	if(syntax->inputReceiver)
+		syntax->input->destroy(syntax->inputReceiver);
 	free(syntax);
 	return OK;
 }
 
 int
-synreset(syntax_t syntax)
-{
-	if(!syntax)
-		return ERROR("syntax is null");
-	syntax->currentState = &syntax->initialState;
-	return OK;
-}
-
-int
-synaddstate(syntax_t syntax,
-		state_t state,
-		condition_t condition)
-{
-	if(!syntax)
-		return ERROR("syntax is null");
-	return staaddstate(&syntax->initialState, state, condition);
-}
-
-state_t
-syninitialstate(syntax_t syntax)
-{
-	if(!syntax)
-		return ERROR("syntax is null", NULL);
-	return &syntax->initialState;
-}
-
-chtype
 synfeed(syntax_t syntax,
-		char ch)
+		void *data,
+		int r,
+		int c)
 {
-	chtype cht;
-	state_t state;
-
 	if(!syntax)
 		return ERROR("syntax is null");
 	
-	state = syntax->currentState;
-	while(1)
+	if(r == SYNFEEDDRAW)
 	{
-		for(int i = 0; i < state->nSubStates; i++)
+		if(c == EOF)
 		{
-			if(conisset(state->subStates[i].condition, ch))
-			{
-				state = state->subStates[i].nextState;
-				cht = state->cht;
-				goto state_set;
-			}
+			syntax->draw->destroy(syntax->drawReceiver);
+			syntax->drawReceiver = NULL;
 		}
-		if(state == &syntax->initialState)
+		else
 		{
-			cht = state->cht;
-			goto state_set;
+			if(!syntax->drawReceiver && !(syntax->drawReceiver = syntax->draw->create()))
+					return -1;
+			syntax->draw->receive(syntax->drawReceiver, (cursor_t) data, c);
 		}
-		state = &syntax->initialState;
 	}
-state_set:
-	syntax->currentState = state;
-	return cht | ch;
+	else
+	{
+		if(!syntax->inputReceiver && !(syntax->inputReceiver = syntax->input->create()))
+			return -1;
+		syntax->input->receive(syntax->inputReceiver, (text_t*) data, c);
+	}		
+	return OK;
 }

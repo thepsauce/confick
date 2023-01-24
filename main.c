@@ -29,7 +29,7 @@
 #include "syntax.h"
 #include "text.h"
 #include "wdg/code.h"
-#include "rwl.h"
+#include "syntax/C/C.h"
 
 #define CURSEDRGB(color) ((color>>16)&0xFF)*1000/256, ((color>>8)&0xFF)*1000/256, (color&0xFF)*1000/256
 
@@ -89,11 +89,12 @@ main(int argc,
 	bssize(base, sizeof(struct code));
 	bsproc(base, (eventproc_t) cdproc);
 
+	recvaddbase("C", C_create, C_destroy, C_receive);
+
 	widget_t wdg;
 	wdg = wdgcreate("Code", CDFSHOWLINES);
 	syntax_t syntax;
-	syntax = syncreate(COLOR_PAIR(C_PAIR_TEXT));
-	rwlcompile("C.rwl", syntax);
+	syntax = syncreate("C", "C");
 	cdsetsyntax((code_t) wdg, syntax);
 	wdgattach(wdg, NULL);
 	

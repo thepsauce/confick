@@ -28,9 +28,9 @@ cddraw(code_t code)
 	bool showStatus;
 	int num, nDigits;
 	char lineNumberBuf[2 + (int) log10((double) INT_MAX)];
+	struct cursor cursor;
 
 	syntax = code->syntax;
-	synreset(syntax);
 
 	lines = code->text.lines;
 	nLines = code->text.nLines;
@@ -49,6 +49,14 @@ cddraw(code_t code)
 
 	h = code->window->_maxy - y - showStatus;
 	h = max(h, 30);
+
+	cursor.minX = lOff;
+	cursor.minY = 0;
+	cursor.maxX = 30;
+	cursor.maxY = 30;
+	cursor.x = 0;
+	cursor.y = 0;
+
 	for(; h; h--, iLine++)
 	{
 		if(iLine < nLines)
@@ -57,20 +65,17 @@ cddraw(code_t code)
 			sprintf(lineNumberBuf, "%d", iLine + 1);
 			for(int i = 0, n = strlen(lineNumberBuf); i < n; i++)
 				mvaddch(y + iLine, x + nDigits - n + i, lineNumberBuf[i]);
-			for(int i = 0, o = x + lOff; i < line.nBuf; i++)
-			{
-				cht = synfeed(syntax, line.buf[i]);
-				mvaddch(y + iLine, o, cht);
-				o++;
-			}
+			for(int i = 0; i < line.nBuf; i++)
+				synfeed(syntax, &cursor, SYNFEEDDRAW, line.buf[i]);
 			if(iLine + 1 < nLines)
-				synfeed(syntax, '\n');
+				synfeed(syntax, &cursor, SYNFEEDDRAW, '\n');
 		}
 		else if(showLines)
 		{
 			mvaddch(y + iLine, x + nDigits - 1, '~' | COLOR_PAIR(CD_PAIR_EMPTY_LINE_PREFIX));
 		}
 	}
+	synfeed(syntax, &cursor, SYNFEEDDRAW, EOF);
 }
 
 void
