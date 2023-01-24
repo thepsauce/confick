@@ -54,7 +54,7 @@ cddraw(code_t code)
 	cursor.minY = 0;
 	cursor.maxX = 30;
 	cursor.maxY = 30;
-	cursor.x = 0;
+	cursor.x = lOff;
 	cursor.y = 0;
 
 	for(; h; h--, iLine++)

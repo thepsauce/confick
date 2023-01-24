@@ -21,7 +21,7 @@ curputc(cursor_t cursor,
 	//iif(cursor->x >= cursor->minX && cursor->x <= cursor->maxY &&
 	//	cursor->y >= cursor->minY && cursor->y <= cursor->maxY)
 		mvaddch(cursor->y, cursor->x, c);
-	if(c == '\n')
+	if((c & 0xFF) == '\n')
 	{
 		cursor->y++;
 		cursor->x = cursor->minX;
