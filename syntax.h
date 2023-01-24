@@ -18,8 +18,8 @@ curputc(cursor_t cursor,
 {
 	if(!cursor)
 		return ERROR("cursor is null");
-	//iif(cursor->x >= cursor->minX && cursor->x <= cursor->maxY &&
-	//	cursor->y >= cursor->minY && cursor->y <= cursor->maxY)
+	if(cursor->x >= cursor->minX && cursor->x <= cursor->maxY &&
+		cursor->y >= cursor->minY && cursor->y <= cursor->maxY)
 		mvaddch(cursor->y, cursor->x, c);
 	if((c & 0xFF) == '\n')
 	{
@@ -32,12 +32,20 @@ curputc(cursor_t cursor,
 }
 
 int
-curputs(cursor_t cursor,
-		const char *n)
+curputns(cursor_t cursor,
+		int attr,
+		const char *str,
+		int n)
 {
 	if(!cursor)
 		return ERROR("cursor is null");
-	// TODO
+	if(!n)
+		return ERROR("string is null");
+	for(; n; n--, str++)
+	{
+		mvaddch(cursor->y, cursor->x, *str | attr);
+		cursor->x++;
+	}
 	return OK;
 }
 
@@ -140,21 +148,25 @@ synfeed(syntax_t syntax,
 	{
 		if(c == EOF)
 		{
-			syntax->draw->destroy(syntax->drawReceiver);
-			syntax->drawReceiver = NULL;
+			if(syntax->drawReceiver)
+			{
+				syntax->draw->receive(syntax->drawReceiver, (cursor_t) data, c);
+				syntax->draw->destroy(syntax->drawReceiver);
+				syntax->drawReceiver = NULL;
+			}
 		}
 		else
 		{
 			if(!syntax->drawReceiver && !(syntax->drawReceiver = syntax->draw->create()))
-					return -1;
-			syntax->draw->receive(syntax->drawReceiver, (cursor_t) data, c);
+				return -1;
+			while(syntax->draw->receive(syntax->drawReceiver, (cursor_t) data, c) > 0);
 		}
 	}
 	else
 	{
 		if(!syntax->inputReceiver && !(syntax->inputReceiver = syntax->input->create()))
 			return -1;
-		syntax->input->receive(syntax->inputReceiver, (text_t*) data, c);
+		while(syntax->input->receive(syntax->inputReceiver, (text_t*) data, c) > 0);
 	}		
 	return OK;
 }

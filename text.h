@@ -383,7 +383,10 @@ txup(text_t *text)
 		return ERROR("text is null");
 
 	if(text->cursor.y)
+	{
 		text->cursor.y--;
+		text->cursor.x = min(text->cursor.x, text->lines[text->cursor.y].nBuf);
+	}
 	return OK;
 }
 
@@ -394,7 +397,10 @@ txdown(text_t *text)
 		return ERROR("text is null");
 
 	if(text->cursor.y + 1 < text->nLines)
+	{
 		text->cursor.y++;
+		text->cursor.x = min(text->cursor.x, text->lines[text->cursor.y].nBuf);
+	}
 	return OK;
 }
 
