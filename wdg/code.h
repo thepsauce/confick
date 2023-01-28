@@ -136,10 +136,6 @@ cddraw(code_t code)
 		}
 	}
 	tunit->write(tunit, EOF);
-
-	
-	for(int i = 0; i < lines[0].nBuf; i++)
-		mvwprintw(code->window, 1, lOff + i * 7, "\\u%x", lines[0].buf[i]);
 	wmove(code->window, code->cursor.vy, code->cursor.vx);
 }
 
