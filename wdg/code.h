@@ -1,11 +1,48 @@
 void
 cdupdatecursor(code_t code)
 {
+	bool showStatus, showLines;
+	int num, nDigits;
+	int x, y, w, h;
+	int vx, vy;
+	
+	showLines = !!(code->flags & CDFSHOWLINES);
+	showStatus = !!(code->flags & CDFSHOWSTATUS);
+	
+	nDigits = 0;
+	for(int num = code->text.nLines; num; num /= 10, nDigits++);
 
+	getbegyx(code->window, y, x);
+	getmaxyx(code->window, h, w);
+	w -= x;
+	h -= y;
+	w -= showLines * (nDigits + 1);
+	h -= showStatus;
+	w--;
+	h--;
+	vx = 0;
+	for(int i = 0; i < code->text.cursor.x; i++)
+		if(code->text.lines[code->text.cursor.y].buf[i] == L'\t')
+			vx += 4 - vx % 4;
+		else
+			vx++;
+	vy = code->text.cursor.y;
+	if(vx < code->scrollX)
+		code->scrollX = max(vx - code->scrollX - 4, 0);
+	else if(vx - code->scrollX > w)
+		code->scrollX = vx - w + 4;
+	if(vy < code->scrollY)
+		code->scrollY = vy;
+	else if(vy - code->scrollY > h)
+		code->scrollY = vy - h;
+	code->cursor.rvx = vx;
+	code->cursor.rvy = vy;
+	code->cursor.vx = vx - code->scrollX + showLines * (nDigits + 1);
+	code->cursor.vy = vy - code->scrollY;
 }
 
 int
-cdsetsyntax(code_t code, syntax_t syntax)
+cdsetsyntax(code_t code, tunit_t syntax)
 {
 	if(!code || !syntax)
 		return ERROR(!code ? "code is null" : "syntax is null");
@@ -16,80 +53,94 @@ cdsetsyntax(code_t code, syntax_t syntax)
 void
 cddraw(code_t code)
 {
-	syntax_t syntax;
-	chtype cht;
+	tunit_t tunit;
+	cchar_t cc;
 	line_t *lines, line;
 	int nLines;
 	int iLine;
+	int i;
 	int x, y;
-	int h;
+	int w, h;
 	int lOff;
+	bool eofWritten = 0;
 	bool showLines;
 	bool showStatus;
 	int num, nDigits;
-	char lineNumberBuf[2 + (int) log10((double) INT_MAX)];
-	struct cursor cursor;
+	char lineNumberBuf[3 + (int) log10((double) INT_MAX)];
 
-	syntax = code->syntax;
+	void read_chars(void)
+	{
+		wchar_t w[CCHARW_MAX];
+		attr_t a;
+		short cp;
+		while(!tunit->read(tunit, &cc))
+		{
+			getcchar(&cc, w, &a, &cp, NULL);
+			if(!wcscmp(w, L"\t"))
+			{
+				x += 4 - x % 4;
+			}
+			else
+			{
+				if(x >= 0)
+					mvwadd_wch(code->window, y, x + lOff, &cc);
+				x++;
+			}
+		}
+	}
 
 	lines = code->text.lines;
 	nLines = code->text.nLines;
-	iLine = 0;
+	iLine = code->scrollY;
 
 	for(num = nLines, nDigits = 0; num; num /= 10, nDigits++);
 
-	x = code->window->_begx;
-	y = code->window->_begy + code->window->_yoffset;
-	x = y = 0;
+	getbegyx(code->window, y, x);
+	getmaxyx(code->window, h, w);
+	h -= y;
 
 	showLines = !!(code->flags & CDFSHOWLINES);
 	showStatus = !!(code->flags & CDFSHOWSTATUS);
 	
 	lOff = showLines * (nDigits + 1);
+	h -= showStatus;
 
-	h = code->window->_maxy - y - showStatus;
-	h = max(h, 30);
+	tunit = code->syntax;
 
-	cursor.minX = lOff;
-	cursor.minY = 0;
-	cursor.maxX = 30;
-	cursor.maxY = 30;
-	cursor.x = lOff;
-	cursor.y = 0;
-
-	for(; h; h--, iLine++)
+	werase(code->window);
+	if(showStatus)
+		mvwprintw(code->window, h, 0, "%d:%d", code->cursor.vx, code->cursor.vy);
+	for(x = -code->scrollX, y = 0; h; h--, iLine++, y++, x = -code->scrollX)
 	{
 		if(iLine < nLines)
 		{
 			line = lines[iLine];
-			sprintf(lineNumberBuf, "%d", iLine + 1);
-			for(int i = 0, n = strlen(lineNumberBuf); i < n; i++)
-				mvaddch(y + iLine, x + nDigits - n + i, lineNumberBuf[i]);
-			for(int i = 0; i < line.nBuf; i++)
-				synfeed(syntax, &cursor, SYNFEEDDRAW, line.buf[i]);
-			if(iLine + 1 < nLines)
-				synfeed(syntax, &cursor, SYNFEEDDRAW, '\n');
+			int n = sprintf(lineNumberBuf, "%d", iLine + 1);
+			wmove(code->window, y, nDigits - n);
+			for(int i = 0; i < n; i++)
+				waddch(code->window, lineNumberBuf[i]);
+			for(i = 0; i < line.nBuf; i++)
+			{
+				tunit->write(tunit, line.buf[i]);
+				read_chars();
+			}
+			if(iLine + 1 == nLines)
+				tunit->write(tunit, EOF - 1);
+			else
+				tunit->write(tunit, L'\n');
+			read_chars();
 		}
 		else if(showLines)
 		{
-			mvaddch(y + iLine, x + nDigits - 1, '~' | COLOR_PAIR(CD_PAIR_EMPTY_LINE_PREFIX));
+			mvwaddch(code->window, y, nDigits - 1, '~' | COLOR_PAIR(CD_PAIR_EMPTY_LINE_PREFIX));
 		}
 	}
-	synfeed(syntax, &cursor, SYNFEEDDRAW, EOF);
-}
+	tunit->write(tunit, EOF);
 
-void
-cddrawcursor(code_t code)
-{
-	int nLines;
-	bool showLines;
-	int num, nDigits;
 	
-	nLines = code->text.nLines;
-	showLines = !!(code->flags & CDFSHOWLINES);
-	for(num = nLines, nDigits = 0; num; num /= 10, nDigits++);
-
-	move(code->text.cursor.y, code->text.cursor.x + showLines * (nDigits + 1));
+	for(int i = 0; i < lines[0].nBuf; i++)
+		mvwprintw(code->window, 1, lOff + i * 7, "\\u%x", lines[0].buf[i]);
+	wmove(code->window, code->cursor.vy, code->cursor.vx);
 }
 
 int 
@@ -120,9 +171,6 @@ cdproc(code_t code,
 	case WDGDRAW:
 		cddraw(code);
 		break;
-	case WDGDRAWCURSOR:
-		cddrawcursor(code);
-		break;
 	default:
 		for(int i = 0; i < ARRLEN(table); i++)
 		{
@@ -133,11 +181,8 @@ cdproc(code_t code,
 				return OK;
 			}
 		}
-		if(c >= 0x00 && c < 0xFF)
-		{
-			txadd(&code->text, c);
-			cdupdatecursor(code);
-		}
+		txadd(&code->text, c);
+		cdupdatecursor(code);
 	}
 	return OK;
 }

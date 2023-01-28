@@ -1,54 +1,3 @@
-/* Cursor */
-int
-curmove(cursor_t cursor,
-		int x,
-		int y)
-{
-	if(!cursor)
-		return ERROR("cursor is null");
-
-	cursor->x = x;
-	cursor->y = y;
-	return OK;
-}
-
-int
-curputc(cursor_t cursor,
-		int c)
-{
-	if(!cursor)
-		return ERROR("cursor is null");
-	if(cursor->x >= cursor->minX && cursor->x <= cursor->maxY &&
-		cursor->y >= cursor->minY && cursor->y <= cursor->maxY)
-		mvaddch(cursor->y, cursor->x, c);
-	if((c & 0xFF) == '\n')
-	{
-		cursor->y++;
-		cursor->x = cursor->minX;
-	}
-	else
-		cursor->x++;
-	return OK;
-}
-
-int
-curputns(cursor_t cursor,
-		int attr,
-		const char *str,
-		int n)
-{
-	if(!cursor)
-		return ERROR("cursor is null");
-	if(!n)
-		return ERROR("string is null");
-	for(; n; n--, str++)
-	{
-		mvaddch(cursor->y, cursor->x, *str | attr);
-		cursor->x++;
-	}
-	return OK;
-}
-
 /* Receiver */
 struct {
 	receiverbase_t *bases;
@@ -59,7 +8,7 @@ int
 recvaddbase(const char *name,
 		void *(*create)(void),
 		int (*destroy)(void *receiver),
-		int (*receive)(void *receive, cursor_t cursor, int c))
+		int (*receive)(void *receiver, void *extra, int c))
 {
 	receiverbase_t base;
 
@@ -150,7 +99,7 @@ synfeed(syntax_t syntax,
 		{
 			if(syntax->drawReceiver)
 			{
-				syntax->draw->receive(syntax->drawReceiver, (cursor_t) data, c);
+				syntax->draw->receive(syntax->drawReceiver, (WINDOW*) data, c);
 				syntax->draw->destroy(syntax->drawReceiver);
 				syntax->drawReceiver = NULL;
 			}
@@ -159,7 +108,7 @@ synfeed(syntax_t syntax,
 		{
 			if(!syntax->drawReceiver && !(syntax->drawReceiver = syntax->draw->create()))
 				return -1;
-			while(syntax->draw->receive(syntax->drawReceiver, (cursor_t) data, c) > 0);
+			while(syntax->draw->receive(syntax->drawReceiver, (WINDOW*) data, c) > 0);
 		}
 	}
 	else

@@ -84,10 +84,8 @@ _wdgmgrrelayout(widget_t wdg,
 	}
 	else
 	{
-		wdg->window->_begx = minX;
-		wdg->window->_begy = minY;
-		wdg->window->_begx = minX + maxWidth;
-		wdg->window->_begy = minY + maxHeight;
+		wresize(wdg->window, maxHeight + 1, maxWidth + 1);
+		mvwin(wdg->window, minY, minX);
 		if(!wdg->child)
 			return;
 		first = wdg->child;
@@ -191,8 +189,12 @@ wdgdraw(widget_t wdg)
 
 again:
 	wdgevent(wdg, WDGDRAW);
+	wnoutrefresh(wdg->window);
 	for(child = wdg->child; child; child = child->next)
-		wdgevent(child,  WDGDRAW);
+	{
+		wdgevent(child, WDGDRAW);
+		wnoutrefresh(child->window);
+	}
 	for(child = wdg->child; child; child = child->next)
 	for(int y = 0, h = 0 /* TODO */; y <= h; y++)
 		;//mvaddch(wdg->y + y, child->x + child->width + 1, ' ' | A_DIM | COLOR_PAIR(3));
@@ -201,13 +203,13 @@ again:
 		wdg = wdg->next;
 		goto again;
 	}
+	doupdate();
 }
 
 void
 wdgmgrdraw(void)
 {
 	wdgdraw(FirstWidget);
-	wdgevent(Focus, WDGDRAWCURSOR);
 }
 
 widget_t

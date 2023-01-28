@@ -13,7 +13,6 @@ bscreate(void)
 		return ERROR("out of memory", NULL);
 	memset(base, 0, sizeof*base);
 	base->flags |= BASECREATED;
-
 	return base;
 }
 
@@ -95,9 +94,15 @@ wdgcreate(const char *bsName,
 		return WARN("base with that name doesn't exist", NULL);
 	if((base->flags & BASECOMPLETE) != BASECOMPLETE)
 		return WARN("base is not complete", NULL);
-	win = newwin(0, 0, 0, 0);
+	win = newwin(1, 1, 0, 0);
 	if(!win)
 		return ERROR("could not make new window", NULL);
+	keypad(win, TRUE);
+	idlok(win, TRUE);
+	idcok(win, TRUE);
+	immedok(win, FALSE);
+	leaveok(win, FALSE);
+	scrollok(win, FALSE);
 	wdg = malloc(base->size);
 	if(!wdg)
 		return ERROR("out of memory", NULL);

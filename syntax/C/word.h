@@ -38,9 +38,9 @@ const char *keywords[] = {
 
 // 0 - char received
 // 1 - end of word
-int C_word(C_receiver_t r, int c)
+int C_word(C_tunit_t r, int c)
 {
-	if(isalnum(c) || c == '_' || c == '$')
+	if(isalnum(c) || c == L'_' || c == L'$')
 	{
 		if(r->nWord + 1 > r->szWord)
 		{
@@ -54,21 +54,32 @@ int C_word(C_receiver_t r, int c)
 	return 1;
 }
 
-int C_state_globalword(C_receiver_t r, cursor_t cursor, int c)
+int C_state_word(C_tunit_t r, int c)
 {
-	int i;
+	attr_t a;
+	short color_pair;
 	
 	if(!C_word(r, c))
 		return 0;
 
-	c = COLOR_PAIR(C_PAIR_TEXT);
+	a = 0;
+	color_pair = C_PAIR_TEXT;
 	for(int i = 0; i < ARRLEN(keywords); i++)
 		if(strlen(keywords[i]) == r->nWord && !memcmp(keywords[i], r->word, r->nWord))
 		{
-			c = A_BOLD | COLOR_PAIR(C_PAIR_KEYWORD1);
+			a = A_BOLD;
+			color_pair = C_PAIR_KEYWORD1;
 			break;
 		}
-	r->state = C_STATE_GLOBAL;
-	curputns(cursor, c, r->word, r->nWord);
+	for(int i = 0; i < r->nWord; i++)
+	{
+		wchar_t w[2];
+		w[0] = r->word[i];
+		w[1] = L'\0';
+		setcchar(r->data + r->iWrite, w, a, color_pair, NULL);
+		r->iWrite++;
+		r->iWrite %= ARRLEN(r->data);
+	}
+	r->state = r->prevState;
 	return 1;
 }

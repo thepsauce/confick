@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE_EXTENDED
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -6,6 +7,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <limits.h>
+#include <locale.h>
 
 #define ARRLEN(a) (sizeof(a)/sizeof*(a))
 
@@ -26,7 +28,7 @@
 #include "wdgbase.h"
 #include "wdg.h"
 #include "wdgmgr.h"
-#include "syntax.h"
+#include "tunit.h"
 #include "text.h"
 #include "wdg/code.h"
 #include "syntax/C/C.h"
@@ -37,12 +39,15 @@ int
 main(int argc, 
 		char **argv)
 {
+	setlocale(LC_ALL, "");
+
 	initscr();
+
 
 	if(!has_colors())
 	{
-		printw("terminal doesn't support color");
 		endwin();
+		printf("terminal doesn't support color\n");
 		exit(0);
 	}
 	noecho();
@@ -50,10 +55,8 @@ main(int argc,
 	// cbreak();
 	raw();
 	mouseinterval(0);
-	keypad(stdscr, 1);
 	//mousemask(ALL_MOUSE_EVENTS, NULL);
-	idlok(stdscr, 0);
-	idcok(stdscr, 0);
+	nl();
 	/* Vaxeral was here. */
 
 	start_color();
@@ -89,35 +92,37 @@ main(int argc,
 	bssize(base, sizeof(struct code));
 	bsproc(base, (eventproc_t) cdproc);
 
-	recvaddbase("C", C_create, C_destroy, C_receive);
+	tuaddname("C", sizeof(struct c_tunit),
+			(int (*)(tunit_t)) C_init,
+			(int (*)(tunit_t, int)) C_write,
+			(int (*)(tunit_t, void*)) C_read,
+			(int (*)(tunit_t)) C_destroy);
 
 	widget_t wdg;
-	wdg = wdgcreate("Code", CDFSHOWLINES);
-	syntax_t syntax;
-	syntax = syncreate("C", "C");
-	cdsetsyntax((code_t) wdg, syntax);
+	wdg = wdgcreate("Code", CDFSHOWLINES | CDFSHOWSTATUS);
+	((code_t) wdg)->text.flags |= TXFLINECROSSING;
+	cdsetsyntax((code_t) wdg, tucreate("C"));
+	if(argc > 1)
+		txopen(&((code_t) wdg)->text, argv[1]);
 	wdgattach(wdg, NULL);
-	
+
 	while(1)
 	{
 		int szX, szY;
-		int c;
+		wint_t c;
 
 		getmaxyx(stdscr, szY, szX);
 		wdgmgrupdate(szX, szY);
-		erase();
 		wdgmgrdraw();
-		//wrefresh(wdg->window);
-		refresh();
-		c = getch();
+		wdg = wdgmgrgetfocus();
+		wget_wch(wdg->window, &c);
 		switch(c)
 		{
-		case 'q' - ('a' - 1):
+		case L'q' - (L'a' - 1):
 			wdgmgrdiscard();
 			break;
 		default:
-			if((wdg = wdgmgrgetfocus()))
-				wdgevent(wdg, c);
+			wdgevent(wdg, c);
 		}
 	}
 

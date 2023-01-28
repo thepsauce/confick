@@ -39,8 +39,7 @@ int wdgfree(widget_t wdg);
 #define WDGINIT (-1)
 #define WDGUNINIT (-2)
 #define WDGDRAW (-3)
-#define WDGDRAWCURSOR (-4)
-#define WDGDEFAULT (-5)
+#define WDGDEFAULT (-4)
 int wdgevent(widget_t wdg, int c);
 
 // widget manager
@@ -56,24 +55,16 @@ void wdgmgrrotate(void);
 // line text system
 typedef struct line {
 	int flags;
-	char *buf;
+	wchar_t *buf;
 	int nBuf, szBuf;
 } line_t;
-
-typedef struct cursor {
-	int minX, minY, maxX, maxY;
-	int x, y;
-} *cursor_t;
-int curmove(cursor_t cursor, int x, int y);
-int curputc(cursor_t cursor, int c);
-int curputs(cursor_t cursor, const char *n);
 
 #define TXFLINECROSSING (1<<1)
 typedef struct text {
 	int flags;
 	char *fileName;
 	struct {
-		int x, y;	
+		int x, y;
 	} cursor;
 	line_t *lines;
 	int nLines, szLines;
@@ -98,31 +89,39 @@ enum {
 	CD_PAIR_EMPTY_LINE_PREFIX,
 };
 
+#define _TUNIT_HEADER \
+	int (*write)(struct tunit *tunit, int c); \
+	int (*read)(struct tunit *tunit, void *ptr); \
+	int (*destroy)(struct tunit *tunit);
+typedef struct tunit {
+	_TUNIT_HEADER;
+} *tunit_t;
+
 typedef struct {
 	char *name;
-	void *(*create)(void);
-	int (*destroy)(void *receiver);
-	int (*receive)(void *receiver, cursor_t cursor, int c);
-} *receiverbase_t;
-int recvaddbase(const char *name, void *(*create)(void), int (*destroy)(void *receiver), int (*receiver)(void *receiver, cursor_t cursor, int c));
-receiverbase_t recvgetbase(const char *name);
-
-typedef struct syntax {
-	receiverbase_t draw, input;
-	void *drawReceiver, *inputReceiver;
-} *syntax_t;
-syntax_t syncreate(const char *nameReceiverDrawBase, const char *nameReceiverInputBase);
-int synfree(syntax_t syntax);
-#define SYNFEEDDRAW 1
-#define SYNFEEDINPUT 2
-int synfeed(syntax_t syntax, void *data, int r, int c);
+	size_t size;
+	int (*init)(tunit_t tunit);
+	int (*write)(tunit_t tunit, int c);
+	int (*read)(tunit_t tunit, void *ptr);
+	int (*destroy)(tunit_t tunit);
+} *tunitname_t;
+int tuaddname(const char *name, size_t size, int (*init)(tunit_t tunit),
+		int (*write)(tunit_t tunit, int c),
+		int (*read)(tunit_t tunit, void *ptr),
+		int (*destroy)(tunit_t tunit));
+tunitname_t tugetname(const char *name);
 
 #define CDFSHOWLINES (1<<1)
 #define CDFSHOWSTATUS (1<<2)
 typedef struct code {
 	_WIDGET_HEADER;
 	text_t text;
-	syntax_t syntax;
+	struct {
+		int rvx, rvy;
+		int vx, vy;
+	} cursor;
+	int scrollX, scrollY;
+	tunit_t syntax;
 } *code_t;
 
 typedef struct console {

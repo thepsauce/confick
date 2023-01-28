@@ -2,10 +2,10 @@
 int
 lnaddnstr(line_t *line, 
 		int index, 
-		const char *str, 
+		const wchar_t *str, 
 		int nStr) 
 {
-	char *buf;
+	wchar_t *buf;
 	int nBuf, nNewBuf;
 	int szBuf;
 	int nTail;
@@ -21,7 +21,7 @@ lnaddnstr(line_t *line,
 	{
 		szBuf *= 2;
 		szBuf += nStr;
-		buf = realloc(buf, szBuf);
+		buf = realloc(buf, szBuf * sizeof*buf);
 		if(!buf)
 			return ERROR("out of memory");
 
@@ -30,9 +30,9 @@ lnaddnstr(line_t *line,
 	}
 	buf += index;
 	nTail = nBuf - index;
-	memmove(buf + nStr, buf, nTail);
+	memmove(buf + nStr, buf, nTail * sizeof*buf);
 	if(str)
-		memcpy(buf, str, nStr);
+		memcpy(buf, str, nStr * sizeof*buf);
 
 	line->nBuf = nNewBuf;
 	return OK;
@@ -40,7 +40,7 @@ lnaddnstr(line_t *line,
 
 int lnadd(line_t *line,
 		int index,
-		char ch)
+		wchar_t ch)
 {
 	return lnaddnstr(line, index, &ch, 1);
 }
@@ -48,11 +48,11 @@ int lnadd(line_t *line,
 int
 lnaddstr(line_t *line,
 		int index,
-		const char *str)
+		const wchar_t *str)
 {
 	if(!str)
 		return ERROR("string is null");
-	return lnaddnstr(line, index, str, strlen(str));
+	return lnaddnstr(line, index, str, wcslen(str));
 }
 
 /* Text */
@@ -128,7 +128,7 @@ txopen(text_t *text,
 	lines = text->lines;
 	nLines = text->nLines;
 	szLines = text->szLines;
-	while((c = fgetc(file)) != EOF)
+	while((c = fgetwc(file)) != EOF)
 	{
         if(c == '\n')
         {
@@ -136,7 +136,7 @@ txopen(text_t *text,
 			{
 				szLines *= 2;
 				szLines++;
-				lines = realloc(lines, sizeof*lines);
+				lines = realloc(lines, szLines * sizeof*lines);
 				if(!lines)
 					return ERROR("out of memory");
 			}
@@ -180,7 +180,6 @@ txsave(text_t *text)
 	return OK;
 }
 
-
 int
 txbreak(text_t *text)
 {
@@ -189,7 +188,7 @@ txbreak(text_t *text)
 	int szLines;
 	int iLine;
 	int index;
-	char *tail;
+	wchar_t *tail;
 	int nTail;
 
 	if(!text)
@@ -220,10 +219,10 @@ txbreak(text_t *text)
 	lines[iLine].nBuf = index;
 
 	iLine++;
-	lines[iLine].buf = malloc(nTail);
+	lines[iLine].buf = malloc(nTail * sizeof*tail);
 	lines[iLine].nBuf = nTail;
 	lines[iLine].szBuf = nTail;
-	memcpy(lines[iLine].buf, tail, nTail);
+	memcpy(lines[iLine].buf, tail, nTail * sizeof*tail);
 
 	text->nLines = nLines;
 
@@ -234,7 +233,7 @@ txbreak(text_t *text)
 
 int
 txadd(text_t *text,
-		char ch)
+		int c)
 {
 	line_t *lines;
 	int iLine;
@@ -246,22 +245,22 @@ txadd(text_t *text,
 	lines = text->lines;
 	iLine = text->cursor.y;
 	index = text->cursor.x;
-	if(ch == '\n')
+	if(c == L'\n')
 		return txbreak(text);
 	text->cursor.x++;
-	return lnadd(&lines[iLine], index, ch);
+	return lnadd(&lines[iLine], index, c);
 }
 
 int 
 txaddnstr(text_t *text, 
-		const char *str,
+		const wchar_t *str,
 		int nStr)
 {
 	int iLine;
 	line_t *lines;
 	int n;
 	int index;
-	const char *lineStart;
+	const wchar_t *lineStart;
 
 	if(!text)
 		return ERROR("text is null");
@@ -289,11 +288,11 @@ txaddnstr(text_t *text,
 
 int
 txaddstr(text_t *text,
-		const char *str)
+		const wchar_t *str)
 {
 	if(!str)
 		return ERROR("string is null");
-	return txaddnstr(text, str, strlen(str));
+	return txaddnstr(text, str, wcslen(str));
 }
 
 int
@@ -327,15 +326,9 @@ txremove(text_t *text)
 	else
 	{
 		line->nBuf--;
-		memmove(line->buf + index, line->buf + index + 1, line->nBuf - index);
+		memmove(line->buf + index, line->buf + index + 1, (line->nBuf - index) * sizeof*line->buf);
 	}
 	return OK;
-}
-
-int
-txleftremove(text_t *text)
-{
-	return !txleft(text) && !txremove(text);
 }
 
 int
@@ -356,6 +349,13 @@ txleft(text_t *text)
 		text->cursor.x--;
 	return OK;
 }
+
+int
+txleftremove(text_t *text)
+{
+	return !txleft(text) && !txremove(text);
+}
+
 
 int 
 txright(text_t *text)
