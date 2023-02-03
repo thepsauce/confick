@@ -27,16 +27,16 @@ C_check_intsuffix(C_tunit_t r,
 	switch(c)
 	{
 	case L'u':
+		C_setstate(r, C_STATE_USUFFIX);
 		C_number_out(r, c);
-		r->state = C_STATE_USUFFIX;
 		break;
 	case L'i':
+		C_setstate(r, C_STATE_ERRSUFFIX);
 		C_number_out(r, c);
-		r->state = C_STATE_ERRSUFFIX;
 		break;
 	case L'l':
+		C_setstate(r, C_STATE_LSUFFIX);
 		C_number_out(r, c);
-		r->state = C_STATE_LSUFFIX;
 		break;
 	default:
 		if(isxdigit(c))
@@ -44,7 +44,7 @@ C_check_intsuffix(C_tunit_t r,
 			C_error_out(r, c);
 			return 0;
 		}
-		r->state = r->prevState;
+		C_popstate(r);
 		return 1;
 	}
 	return 0;
@@ -59,7 +59,7 @@ C_state_errsuffix(C_tunit_t r,
 		C_error_out(r, c);
 		return 0;
 	}
-	r->state = r->prevState;
+	C_popstate(r);
 	return 1;
 }
 
@@ -70,11 +70,11 @@ C_state_usuffix(C_tunit_t r,
 	switch(c)
 	{
 	case L'l':
+		C_setstate(r, C_STATE_LSUFFIX);
 		C_number_out(r, c);
-		r->state = C_STATE_LSUFFIX;
 		break;
 	default:
-		r->state = C_STATE_ERRSUFFIX;
+		C_setstate(r, C_STATE_ERRSUFFIX);
 		return 1;	
 	}
 	return 0;
@@ -87,11 +87,11 @@ C_state_lsuffix(C_tunit_t r,
 	switch(c)
 	{
 	case L'l':
+		C_setstate(r, C_STATE_ERRSUFFIX);
 		C_number_out(r, c);
-		r->state = C_STATE_ERRSUFFIX;
 		break;
 	default:
-		r->state = C_STATE_ERRSUFFIX;
+		C_setstate(r, C_STATE_ERRSUFFIX);
 		return 1;	
 	}
 	return 0;
@@ -104,24 +104,24 @@ C_state_zero(C_tunit_t r,
 	switch(c)
 	{
 	case L'x': case L'X':
+		C_setstate(r, C_STATE_HEX);
 		C_number_out(r, c);
-		r->state = C_STATE_HEX;
 		break;
 	case L'0' ... L'7':
+		C_setstate(r, C_STATE_OCTAL);
 		C_number_out(r, c);
-		r->state = C_STATE_OCTAL;	
 		break;
 	case L'B': case L'b':
+		C_setstate(r, C_STATE_BINARY);
 		C_number_out(r, c);
-		r->state = C_STATE_BINARY;
 		break;
 	case L'.':
+		C_setstate(r, C_STATE_FLOAT);
 		C_number_out(r, c);
-		r->state = C_STATE_FLOAT;
 		break;
 	case L'e':
+		C_setstate(r, C_STATE_EXP);
 		C_number_out(r, c);
-		r->state = C_STATE_EXP;
 		break;
 	default:
 		return C_check_intsuffix(r, c);
@@ -139,12 +139,12 @@ C_state_decimal(C_tunit_t r,
 		C_number_out(r, c);
 		break;
 	case L'.':
+		C_setstate(r, C_STATE_FLOAT);
 		C_number_out(r, c);
-		r->state = C_STATE_FLOAT;
 		break;
 	case L'e':
+		C_setstate(r, C_STATE_EXP);
 		C_number_out(r, c);
-		r->state = C_STATE_EXP;
 		break;
 	default:
 		return C_check_intsuffix(r, c);
@@ -210,14 +210,17 @@ C_state_float(C_tunit_t r,
 		C_number_out(r, c);
 		break;
 	case L'e':
+		C_setstate(r, C_STATE_EXP);
 		C_number_out(r, c);
-		r->state = C_STATE_EXP;
 		break;
 	case L'f': case L'F':
 	case L'l': case L'L':
+		C_setstate(r, C_STATE_ERRSUFFIX);
 		C_number_out(r, c);
-		r->state = C_STATE_ERRSUFFIX;
 		break;
+	default:
+		C_setstate(r, C_STATE_ERRSUFFIX);
+		return 1;
 	}
 	return 0;
 }
@@ -229,13 +232,13 @@ C_state_maybefloat(C_tunit_t r,
 	switch(c)
 	{
 	case L'0' ... L'9':
+		C_setstate(r, C_STATE_FLOAT);
 		C_number_out(r, L'.');
 		C_number_out(r, c);
-		r->state = C_STATE_FLOAT;
 		break;
 	default:
+		C_popstate(r);
 		C_buf_out(r, L'.', 0, C_PAIR_TEXT);
-		r->state = r->prevState;
 		return 1;
 	}
 	return 0;
@@ -252,9 +255,12 @@ C_state_exp(C_tunit_t r,
 		break;
 	case L'f': case L'F':
 	case L'l': case L'L':
+		C_setstate(r, C_STATE_ERRSUFFIX);
 		C_number_out(r, c);
-		r->state = C_STATE_ERRSUFFIX;
 		break;
+	default:
+		C_setstate(r, C_STATE_ERRSUFFIX);
+		return 1;
 	}
 	return 0;
 }

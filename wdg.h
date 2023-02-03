@@ -8,9 +8,7 @@ bscreate(void)
 {
 	base_t base;
 
-	base = malloc(sizeof*base);
-	if(!base)
-		return ERROR("out of memory", NULL);
+	base = safe_malloc(sizeof*base);
 	memset(base, 0, sizeof*base);
 	base->flags |= BASECREATED;
 	return base;
@@ -20,27 +18,24 @@ int
 bsname(base_t base, 
 		const char *name)
 {
-	char *bsName;
-
 	if(!base || !(base->flags & BASECREATED) || !name)
 		return ERROR(!base ? "base is null" : 
 				!name ? "name is null" : 
 				"base was not created yet");
+	if(strlen(name) > BASENAME_MAX)
+		return ERROR("string is too long");
 	if(bsfind(name))
 		return WARN("base with that name exists already");
-	bsName = strdup(name);
-	if(!bsName)
-		return ERROR("out of memory");
 
-	base->name = bsName;
-	base->flags |= BASENAME;
 	if(Bases.n + 1 > Bases.sz)
 	{
 		Bases.sz *= 2;
 		Bases.sz++;
-		Bases.p = realloc(Bases.p, Bases.sz * sizeof*Bases.p);
+		Bases.p = safe_realloc(Bases.p, Bases.sz * sizeof*Bases.p);
 	}
 	Bases.p[Bases.n++] = base;
+	strcpy(base->name, name);
+	base->flags |= BASENAME;
 	return OK;
 }
 
@@ -103,14 +98,12 @@ wdgcreate(const char *bsName,
 	immedok(win, FALSE);
 	leaveok(win, FALSE);
 	scrollok(win, FALSE);
-	wdg = malloc(base->size);
-	if(!wdg)
-		return ERROR("out of memory", NULL);
+	wdg = safe_malloc(base->size);
 	memset(wdg, 0, base->size);
 	wdg->window = win;
 	wdg->base = base;
 	wdg->flags = flags;
-	if(wdg->base->proc(wdg, WDGINIT))
+	if(wdg->base->proc(wdg, WDGINIT, 0))
 	{
 		free(wdg);
 		return WARN("widget refused initializing", NULL);
@@ -124,14 +117,15 @@ wdgfree(widget_t wdg)
 	if(!wdg)
 		return ERROR("widget is null");
 
-	wdg->base->proc(wdg, WDGUNINIT);
+	wdg->base->proc(wdg, WDGUNINIT, 0);
 	free(wdg);
 	return OK;
 }
 
 int 
-wdgevent(widget_t wdg, 
-		int c)
+wdgevent(widget_t wdg,
+		int event,
+		int key)
 {
 	base_t base;
 
@@ -139,5 +133,5 @@ wdgevent(widget_t wdg,
 		return ERROR("widget is null");
 
 	base = wdg->base;
-	return base->proc(wdg, c);
+	return base->proc(wdg, event, key);
 }

@@ -21,10 +21,7 @@ lnaddnstr(line_t *line,
 	{
 		szBuf *= 2;
 		szBuf += nStr;
-		buf = realloc(buf, szBuf * sizeof*buf);
-		if(!buf)
-			return ERROR("out of memory");
-
+		buf = safe_realloc(buf, szBuf * sizeof*buf);
 		line->buf = buf;
 		line->szBuf = szBuf;
 	}
@@ -62,9 +59,7 @@ txinit(text_t *text)
 	if(!text)
 		return ERROR("text is null");
 
-	text->lines = malloc(sizeof*text->lines);
-	if(!text->lines)
-		return ERROR("out of memory");
+	text->lines = safe_malloc(sizeof*text->lines);
 	memset(text->lines, 0, sizeof*text->lines);
 	text->nLines = 1;
 	text->szLines = 1;
@@ -98,9 +93,7 @@ txclear(text_t *text)
 	{
 		tmp = *text->lines;
 		free(text->lines);
-		text->lines = malloc(sizeof*text->lines);
-		if(!text->lines)
-			return ERROR("out of memory");
+		text->lines = safe_malloc(sizeof*text->lines);
 		text->szLines = 1;
 		*text->lines = tmp;
 	}
@@ -122,7 +115,8 @@ txopen(text_t *text,
 	if(txclear(text))
 		return ERROR("text is null");
 
-	text->fileName = strdup(fileName);
+	free(text->fileName);
+	text->fileName = safe_strdup(fileName);
 	if(!(file = fopen(fileName, "r")))
     	return WARN("file could not be opened");
 	lines = text->lines;
@@ -136,9 +130,7 @@ txopen(text_t *text,
 			{
 				szLines *= 2;
 				szLines++;
-				lines = realloc(lines, szLines * sizeof*lines);
-				if(!lines)
-					return ERROR("out of memory");
+				lines = safe_realloc(lines, szLines * sizeof*lines);
 			}
             memset(&lines[nLines], 0, sizeof*lines);
 			nLines++;
@@ -204,10 +196,7 @@ txbreak(text_t *text)
 	{
 		szLines *= 2;
 		szLines++;
-		lines = realloc(lines, szLines * sizeof*lines);
-		if(!lines)
-			return ERROR("out of memory");
-
+		lines = safe_realloc(lines, szLines * sizeof*lines);
 		text->lines = lines;
 		text->szLines = szLines;
 	}
@@ -219,7 +208,7 @@ txbreak(text_t *text)
 	lines[iLine].nBuf = index;
 
 	iLine++;
-	lines[iLine].buf = malloc(nTail * sizeof*tail);
+	lines[iLine].buf = safe_malloc(nTail * sizeof*tail);
 	lines[iLine].nBuf = nTail;
 	lines[iLine].szBuf = nTail;
 	memcpy(lines[iLine].buf, tail, nTail * sizeof*tail);
@@ -353,9 +342,13 @@ txleft(text_t *text)
 int
 txleftremove(text_t *text)
 {
-	return !txleft(text) && !txremove(text);
+	if(!text)
+		return ERROR("text is null");
+	if(!text->cursor.x)
+		return OK;
+	text->cursor.x--;
+	return !txremove(text);
 }
-
 
 int 
 txright(text_t *text)

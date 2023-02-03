@@ -15,29 +15,20 @@ tuaddname(const char *name,
 
 	if(!name)
 		return ERROR("name is null");
+	if(strlen(name) > TUNAME_MAX)
+		return ERROR("name is too long");
 	if(!init || !write || !read || !destroy)
 		return ERROR("a function is null");
 
-	tname = malloc(sizeof*tname);
-	if(!tname)
-		return ERROR("out of memory");
 	if(UnitNames.n + 1 > UnitNames.sz)
 	{
 		UnitNames.sz *= 2;
 		UnitNames.sz++;
-		UnitNames.d = realloc(UnitNames.d, UnitNames.sz * sizeof*UnitNames.d);
-		if(!UnitNames.d)
-		{
-			free(tname);
-			return ERROR("out of memory");
-		}
+		UnitNames.d = safe_realloc(UnitNames.d, UnitNames.sz * sizeof*UnitNames.d);
 	}
-	if(!(tname->name = strdup(name)))
-	{
-		free(tname);
-		return ERROR("out of memory");
-	}
+	tname = safe_malloc(sizeof*tname);
 	UnitNames.d[UnitNames.n++] = tname;
+	strcpy(tname->name, name);
 	tname->size = size;
 	tname->init = init;
 	tname->write = write;
@@ -63,13 +54,11 @@ tucreate(const char *name)
 	if(!(tname = tugetname(name)))
 		return NULL;
 	
-	tunit = malloc(tname->size);
-	if(!tunit)
-		return ERROR("out of memory", NULL);
+	tunit = safe_malloc(tname->size);
 	tunit->write = tname->write;
 	tunit->read = tname->read;
 	tunit->destroy = tname->destroy;
-	if(tname->init(tunit))
+	if(tname->init(tunit) == ERR)
 	{
 		free(tunit);
 		return NULL;

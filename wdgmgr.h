@@ -159,8 +159,7 @@ wdgmgrdiscard(void)
 		}
 		prev = wdg->prev;
 		parent = wdg->parent;
-		wdgevent(wdg, WDGUNINIT);
-		free(wdg);
+		wdgfree(wdg);
 		if(wdg == FirstWidget)
 			break;
 		if(!prev)
@@ -188,13 +187,9 @@ wdgdraw(widget_t wdg)
 	int cnt;
 
 again:
-	wdgevent(wdg, WDGDRAW);
 	wnoutrefresh(wdg->window);
 	for(child = wdg->child; child; child = child->next)
-	{
-		wdgevent(child, WDGDRAW);
 		wnoutrefresh(child->window);
-	}
 	for(child = wdg->child; child; child = child->next)
 	for(int y = 0, h = 0 /* TODO */; y <= h; y++)
 		;//mvaddch(wdg->y + y, child->x + child->width + 1, ' ' | A_DIM | COLOR_PAIR(3));

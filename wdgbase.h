@@ -4,16 +4,22 @@ struct widget;
 #define WARN(msg, ...) ({ fprintf(stderr, "%s:%s:%d > %s\n", __FILE__, __FUNCTION__, __LINE__, (msg)); 1; __VA_ARGS__; })
 #define ERROR(msg, ...) ({ fprintf(stderr, "%s:%s:%d > %s\n", __FILE__, __FUNCTION__, __LINE__, (msg)); exit(-1); -1; __VA_ARGS__; })
 
-typedef int (*eventproc_t)(struct widget *wdg, int eId);
+void *safe_malloc(size_t size);
+void *safe_realloc(void *ptr, size_t newSize);
+void *safe_strdup(const char *str);
+void *safe_strndup(const char *str, size_t nStr);
+
+typedef int (*eventproc_t)(struct widget *wdg, int event, int key);
 
 #define BASECREATED (1<<1)
 #define BASENAME (1<<2)
 #define BASESIZE (1<<3)
 #define BASEPROC (1<<4)
 #define BASECOMPLETE (BASECREATED|BASENAME|BASESIZE|BASEPROC)
+#define BASENAME_MAX 64
 typedef struct base {
 	int flags;
-	char *name;
+	char name[BASENAME_MAX + 1];
 	size_t size;
 	eventproc_t proc;
 } *base_t;
@@ -36,11 +42,10 @@ typedef struct widget {
 
 widget_t wdgcreate(const char *bsName, int flags);
 int wdgfree(widget_t wdg);
-#define WDGINIT (-1)
-#define WDGUNINIT (-2)
-#define WDGDRAW (-3)
-#define WDGDEFAULT (-4)
-int wdgevent(widget_t wdg, int c);
+#define WDGINIT 1
+#define WDGUNINIT 2
+#define WDGKEY 3
+int wdgevent(widget_t wdg, int event, int key);
 
 // widget manager
 void wdgmgrdiscard(void);
@@ -85,43 +90,21 @@ enum {
 	C_PAIR_PREPROC1,
 	C_PAIR_PREPROC2,
 	C_PAIR_ERROR,
+	C_PAIR_LINENUMBER,
 
 	CD_PAIR_EMPTY_LINE_PREFIX,
 };
-
-#define _TUNIT_HEADER \
-	int (*write)(struct tunit *tunit, int c); \
-	int (*read)(struct tunit *tunit, void *ptr); \
-	int (*destroy)(struct tunit *tunit);
-typedef struct tunit {
-	_TUNIT_HEADER;
-} *tunit_t;
-
-typedef struct {
-	char *name;
-	size_t size;
-	int (*init)(tunit_t tunit);
-	int (*write)(tunit_t tunit, int c);
-	int (*read)(tunit_t tunit, void *ptr);
-	int (*destroy)(tunit_t tunit);
-} *tunitname_t;
-int tuaddname(const char *name, size_t size, int (*init)(tunit_t tunit),
-		int (*write)(tunit_t tunit, int c),
-		int (*read)(tunit_t tunit, void *ptr),
-		int (*destroy)(tunit_t tunit));
-tunitname_t tugetname(const char *name);
 
 #define CDFSHOWLINES (1<<1)
 #define CDFSHOWSTATUS (1<<2)
 typedef struct code {
 	_WIDGET_HEADER;
 	text_t text;
-	struct {
-		int rvx, rvy;
-		int vx, vy;
-	} cursor;
+	int vx, vy;
+	int lOff, bOff;
 	int scrollX, scrollY;
-	tunit_t syntax;
+	wchar_t recentInput[512];
+	int iRci;
 } *code_t;
 
 typedef struct console {

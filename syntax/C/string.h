@@ -12,10 +12,7 @@ C_string(C_tunit_t r,
 		return 0;
 	}
 	if(c == EOF)
-	{
-		r->state = r->prevState;
 		return 1;
-	}
 
 	w[0] = c;
 	w[1] = L'\0';
@@ -97,6 +94,6 @@ C_state_string(C_tunit_t r,
 		int c)
 {
 	if(C_string(r, c))
-		r->state = r->prevState;
+		C_popstate(r);
 	return 0;
 }

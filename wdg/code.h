@@ -1,162 +1,199 @@
 void
 cdupdatecursor(code_t code)
 {
-	bool showStatus, showLines;
-	int num, nDigits;
 	int x, y, w, h;
-	int vx, vy;
 	
-	showLines = !!(code->flags & CDFSHOWLINES);
-	showStatus = !!(code->flags & CDFSHOWSTATUS);
-	
-	nDigits = 0;
-	for(int num = code->text.nLines; num; num /= 10, nDigits++);
-
 	getbegyx(code->window, y, x);
 	getmaxyx(code->window, h, w);
 	w -= x;
 	h -= y;
-	w -= showLines * (nDigits + 1);
-	h -= showStatus;
+	w -= code->lOff;
+	h -= code->bOff;
 	w--;
 	h--;
-	vx = 0;
-	for(int i = 0; i < code->text.cursor.x; i++)
-		if(code->text.lines[code->text.cursor.y].buf[i] == L'\t')
-			vx += 4 - vx % 4;
-		else
-			vx++;
-	vy = code->text.cursor.y;
-	if(vx < code->scrollX)
-		code->scrollX = max(vx - code->scrollX - 4, 0);
-	else if(vx - code->scrollX > w)
-		code->scrollX = vx - w + 4;
-	if(vy < code->scrollY)
-		code->scrollY = vy;
-	else if(vy - code->scrollY > h)
-		code->scrollY = vy - h;
-	code->cursor.rvx = vx;
-	code->cursor.rvy = vy;
-	code->cursor.vx = vx - code->scrollX + showLines * (nDigits + 1);
-	code->cursor.vy = vy - code->scrollY;
-}
-
-int
-cdsetsyntax(code_t code, tunit_t syntax)
-{
-	if(!code || !syntax)
-		return ERROR(!code ? "code is null" : "syntax is null");
-	code->syntax = syntax;
-	return OK;
+	if(code->vx < 0)
+	{
+		code->scrollX += code->vx;
+		code->scrollX = max(code->scrollX, 0);
+		code->vx = 0;
+	}
+	else if(code->vx > w)
+	{
+		code->scrollX += code->vx - w;
+		code->vx = w;
+	}
+	if(code->vy < 0)
+	{
+		code->scrollY += code->vy;
+		code->scrollY = max(code->scrollY, 0);
+		code->vy = 0;
+	}				
+	else if(code->vy > h)
+	{
+		code->scrollY += code->vy - h;
+		code->vy = h;
+	}
+	cddraw(code);
 }
 
 void
 cddraw(code_t code)
 {
-	tunit_t tunit;
 	cchar_t cc;
 	line_t *lines, line;
 	int nLines;
-	int iLine;
-	int i;
+	int i, n;
 	int x, y;
 	int w, h;
+	int iLine;
 	int lOff;
+	int vx, vy = -1;
 	bool eofWritten = 0;
 	bool showLines;
 	bool showStatus;
 	int num, nDigits;
 	char lineNumberBuf[3 + (int) log10((double) INT_MAX)];
 
-	void read_chars(void)
-	{
-		wchar_t w[CCHARW_MAX];
-		attr_t a;
-		short cp;
-		while(!tunit->read(tunit, &cc))
-		{
-			getcchar(&cc, w, &a, &cp, NULL);
-			if(!wcscmp(w, L"\t"))
-			{
-				x += 4 - x % 4;
-			}
-			else
-			{
-				if(x >= 0)
-					mvwadd_wch(code->window, y, x + lOff, &cc);
-				x++;
-			}
-		}
-	}
-
 	lines = code->text.lines;
 	nLines = code->text.nLines;
-	iLine = code->scrollY;
 
 	for(num = nLines, nDigits = 0; num; num /= 10, nDigits++);
 
 	getbegyx(code->window, y, x);
 	getmaxyx(code->window, h, w);
+	w -= x;
 	h -= y;
 
 	showLines = !!(code->flags & CDFSHOWLINES);
 	showStatus = !!(code->flags & CDFSHOWSTATUS);
 	
-	lOff = showLines * (nDigits + 1);
+	code->lOff = lOff = showLines * (nDigits + 1);
+	code->bOff = showStatus;
 	h -= showStatus;
 
-	tunit = code->syntax;
-
 	werase(code->window);
-	if(showStatus)
-		mvwprintw(code->window, h, 0, "%d:%d", code->cursor.vx, code->cursor.vy);
-	for(x = -code->scrollX, y = 0; h; h--, iLine++, y++, x = -code->scrollX)
+	for(x = -code->scrollX, y = 0; y < h; y++, x = -code->scrollX)
 	{
-		if(iLine < nLines)
+		iLine = y + code->scrollY;
+		if(iLine >= 0 && iLine < nLines)
 		{
 			line = lines[iLine];
-			int n = sprintf(lineNumberBuf, "%d", iLine + 1);
+			n = sprintf(lineNumberBuf, "%d", iLine + 1);
 			wmove(code->window, y, nDigits - n);
-			for(int i = 0; i < n; i++)
-				waddch(code->window, lineNumberBuf[i]);
-			for(i = 0; i < line.nBuf; i++)
+			for(i = 0; i < n; i++)
+				waddch(code->window, lineNumberBuf[i] | COLOR_PAIR(C_PAIR_LINENUMBER));
+			wmove(code->window, y, lOff);
+			for(i = 0, x = 0; i < line.nBuf; i++)
 			{
-				tunit->write(tunit, line.buf[i]);
-				read_chars();
+				wchar_t ws[2] = { line.buf[i], 0 };
+				if(x < w)
+				{
+					setcchar(&cc, ws, 0, C_PAIR_TEXT, NULL);
+					mvwadd_wch(code->window, y, x + lOff, &cc);
+				}
+				if(vy < 0 && y == code->vy && x >= code->vx)
+				{
+					vx = x;
+					vy = y;
+					code->text.cursor.x = i;
+					code->text.cursor.y = iLine;
+				}
+				if(ws[0] == L'\t')
+					x += 4 - x % TABSIZE;
+				else
+					x++;
 			}
-			if(iLine + 1 == nLines)
-				tunit->write(tunit, EOF - 1);
-			else
-				tunit->write(tunit, L'\n');
-			read_chars();
+			if(vy < 0 && y == code->vy)
+			{
+				vx = x;
+				vy = y;
+				code->text.cursor.x = line.nBuf;
+				code->text.cursor.y = iLine;
+			}
 		}
 		else if(showLines)
 		{
 			mvwaddch(code->window, y, nDigits - 1, '~' | COLOR_PAIR(CD_PAIR_EMPTY_LINE_PREFIX));
 		}
 	}
-	tunit->write(tunit, EOF);
-	wmove(code->window, code->cursor.vy, code->cursor.vx);
+	if(vy < 0)
+	{
+		vx = x;
+		vy = code->text.nLines - 1 - code->scrollY;
+		code->text.cursor.x = code->text.lines[code->text.nLines - 1].nBuf;
+		code->text.cursor.y = code->text.nLines - 1;
+	}
+	if(showStatus)
+		mvwprintw(code->window, h, 0, "%d:%d;%d:%d", code->text.cursor.y + 1, code->text.cursor.x + 1,
+				code->vy, code->vx);
+	
+	wmove(code->window, vy, vx + lOff);
+}
+
+void 
+cdleft(code_t code)
+{
+	code->vx--;
+}
+
+void
+cdright(code_t code)
+{
+	code->vx++;
+}
+
+void cdup(code_t code)
+{
+	code->vy--;
+}
+
+void cddown(code_t code)
+{
+	code->vy++;
+}
+
+void cdhome(code_t code)
+{
+	code->vx = INT_MIN;
+}
+
+void cdend(code_t code)
+{
+	code->vx = INT_MAX;
+}
+
+void
+cdremove(code_t code)
+{
+	txremove(&code->text);
+}
+
+void
+cdleftremove(code_t code)
+{
+	code->vx--;
+	txleftremove(&code->text);
 }
 
 int 
 cdproc(code_t code, 
-		int c)
+		int event,
+		int key)
 {
 	struct {
-		int c;
-		int (*txfunc)(text_t*);
+		int key;
+		void (*cdfunc)(code_t code);
 	} table[] = {
-		{ KEY_LEFT, txleft },
-		{ KEY_RIGHT, txright },
-		{ KEY_UP, txup },
-		{ KEY_DOWN, txdown },
-		{ KEY_HOME, txhome },
-		{ KEY_END, txend },
-		{ KEY_DC, txremove },
-		{ KEY_BACKSPACE, txleftremove },
+		{ KEY_LEFT, cdleft },
+		{ KEY_RIGHT, cdright },
+		{ KEY_UP, cdup },
+		{ KEY_DOWN, cddown },
+		{ KEY_HOME, cdhome },
+		{ KEY_END, cdend },
+		{ KEY_DC, cdremove },
+		{ KEY_BACKSPACE, cdleftremove },
 	};
-	switch(c)
+	switch(event)
 	{
 	case WDGINIT:
 		txinit(&code->text);
@@ -164,21 +201,31 @@ cdproc(code_t code,
 	case WDGUNINIT:
 		txdiscard(&code->text);
 		break;
-	case WDGDRAW:
-		cddraw(code);
-		break;
 	default:
 		for(int i = 0; i < ARRLEN(table); i++)
 		{
-			if(table[i].c == c)
+			if(table[i].key == key)
 			{
-				table[i].txfunc(&code->text);
+				table[i].cdfunc(code);
 				cdupdatecursor(code);
 				return OK;
 			}
 		}
-		txadd(&code->text, c);
+
+		code->recentInput[code->iRci++] = key;
+		code->iRci %= ARRLEN(code->recentInput);
+		txadd(&code->text, key);
+		if(key == '\t')
+			code->vx += 4 - code->vx % TABSIZE;
+		else if(key == '\n')
+		{
+			code->vx = INT_MIN;
+			code->vy++;
+		}
+		else
+			code->vx++;
 		cdupdatecursor(code);
 	}
 	return OK;
 }
+
