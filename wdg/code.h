@@ -1,3 +1,5 @@
+void cddraw(code_t code);
+
 void
 cdupdatecursor(code_t code)
 {
@@ -39,7 +41,6 @@ cdupdatecursor(code_t code)
 void
 cddraw(code_t code)
 {
-	cchar_t cc;
 	line_t *lines, line;
 	int nLines;
 	int i, n;
@@ -47,12 +48,11 @@ cddraw(code_t code)
 	int w, h;
 	int iLine;
 	int lOff;
-	int vx, vy = -1;
-	bool eofWritten = 0;
 	bool showLines;
 	bool showStatus;
 	int num, nDigits;
 	char lineNumberBuf[3 + (int) log10((double) INT_MAX)];
+	struct state_info *si;
 
 	lines = code->text.lines;
 	nLines = code->text.nLines;
@@ -72,6 +72,12 @@ cddraw(code_t code)
 	h -= showStatus;
 
 	werase(code->window);
+
+	si = c_state_create();
+	si->window = code->window;
+	si->x = -code->scrollX;
+	si->y = -code->scrollY;
+	si->tx = code->lOff;
 	for(x = -code->scrollX, y = 0; y < h; y++, x = -code->scrollX)
 	{
 		iLine = y + code->scrollY;
@@ -81,53 +87,23 @@ cddraw(code_t code)
 			n = sprintf(lineNumberBuf, "%d", iLine + 1);
 			wmove(code->window, y, nDigits - n);
 			for(i = 0; i < n; i++)
-				waddch(code->window, lineNumberBuf[i] | COLOR_PAIR(C_PAIR_LINENUMBER));
+				waddch(code->window, lineNumberBuf[i] | A_BOLD | COLOR_PAIR(C_PAIR_LINENUMBER));
 			wmove(code->window, y, lOff);
-			for(i = 0, x = 0; i < line.nBuf; i++)
-			{
-				wchar_t ws[2] = { line.buf[i], 0 };
-				if(x < w)
-				{
-					setcchar(&cc, ws, 0, C_PAIR_TEXT, NULL);
-					mvwadd_wch(code->window, y, x + lOff, &cc);
-				}
-				if(vy < 0 && y == code->vy && x >= code->vx)
-				{
-					vx = x;
-					vy = y;
-					code->text.cursor.x = i;
-					code->text.cursor.y = iLine;
-				}
-				if(ws[0] == L'\t')
-					x += 4 - x % TABSIZE;
-				else
-					x++;
-			}
-			if(vy < 0 && y == code->vy)
-			{
-				vx = x;
-				vy = y;
-				code->text.cursor.x = line.nBuf;
-				code->text.cursor.y = iLine;
-			}
+			for(i = 0; i < line.nBuf; i++)
+				sifeed(si, line.buf[i]);
+			if(iLine + 1 != nLines)
+				sifeed(si, L'\n');
 		}
 		else if(showLines)
 		{
 			mvwaddch(code->window, y, nDigits - 1, '~' | COLOR_PAIR(CD_PAIR_EMPTY_LINE_PREFIX));
 		}
 	}
-	if(vy < 0)
-	{
-		vx = x;
-		vy = code->text.nLines - 1 - code->scrollY;
-		code->text.cursor.x = code->text.lines[code->text.nLines - 1].nBuf;
-		code->text.cursor.y = code->text.nLines - 1;
-	}
 	if(showStatus)
 		mvwprintw(code->window, h, 0, "%d:%d;%d:%d", code->text.cursor.y + 1, code->text.cursor.x + 1,
 				code->vy, code->vx);
-	
-	wmove(code->window, vy, vx + lOff);
+	sifeed(si, EOF);
+	//wmove(code->window, vy, vx + lOff);
 }
 
 void 

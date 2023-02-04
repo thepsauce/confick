@@ -72,7 +72,7 @@ _wdgmgrrelayout(widget_t wdg,
 	int x, y, w, h;
 	int cnt;
 	int dir;
-	widget_t first, next;
+	widget_t first;
 	int layout;
 
 	if(!wdg)
@@ -184,7 +184,6 @@ void
 wdgdraw(widget_t wdg)
 {
 	widget_t child;
-	int cnt;
 
 again:
 	wnoutrefresh(wdg->window);

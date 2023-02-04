@@ -32,6 +32,8 @@
 #include "wdg.h"
 #include "wdgmgr.h"
 #include "text.h"
+#include "state.h"
+#include "C/C.h"
 #include "wdg/code.h"
 
 #define CURSEDRGB(color) ((color>>16)&0xFF)*1000/256, ((color>>8)&0xFF)*1000/256, (color&0xFF)*1000/256
@@ -159,17 +161,18 @@ main(int argc,
 	init_color(COLOR_RED, CURSEDRGB(0xff2063));
 	
 	init_pair(C_PAIR_TEXT, COLOR_YELLOW, COLOR_BLACK);
+	init_pair(C_PAIR_CHAR, COLOR_RED, COLOR_BLACK);
 	init_pair(C_PAIR_NUMBER, COLOR_MAGENTA, COLOR_BLACK);
 	init_pair(C_PAIR_STRING1, COLOR_RED, COLOR_BLACK);
 	init_pair(C_PAIR_STRING2, COLOR_CYAN, COLOR_BLACK);
 	init_pair(C_PAIR_KEYWORD1, COLOR_GREEN, COLOR_BLACK);
 	init_pair(C_PAIR_KEYWORD2, COLOR_BLUE, COLOR_BLACK);
-	init_pair(C_PAIR_COMMENT1, COLOR_YELLOW, COLOR_BLACK);
+	init_pair(C_PAIR_COMMENT1, COLOR_WHITE, COLOR_BLACK);
 	init_pair(C_PAIR_FUNCTION, COLOR_BLUE, COLOR_BLACK);
 	init_pair(C_PAIR_PREPROC1, COLOR_RED, COLOR_BLACK);
 	init_pair(C_PAIR_PREPROC2, COLOR_RED, COLOR_BLACK);
 	init_pair(C_PAIR_ERROR, COLOR_WHITE, COLOR_RED);
-	init_pair(C_PAIR_LINENUMBER, COLOR_GREEN, COLOR_BLACK);
+	init_pair(C_PAIR_LINENUMBER, COLOR_RED, COLOR_BLACK);
 
 	init_pair(CD_PAIR_EMPTY_LINE_PREFIX, COLOR_CYAN, COLOR_BLACK);
 

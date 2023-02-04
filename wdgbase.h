@@ -79,6 +79,7 @@ int txclear(text_t *text);
 // c flavor
 enum {
 	C_PAIR_TEXT = 5,
+	C_PAIR_CHAR,
 	C_PAIR_NUMBER,
 	C_PAIR_STRING1,
 	C_PAIR_STRING2,
