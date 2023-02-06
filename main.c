@@ -109,7 +109,8 @@ safe_strndup(const char *str, size_t nStr)
 	return ptr;
 }
 
-void finish(int sig)
+void
+finish(int sig)
 {
 	wdgmgrdiscard();
 }
@@ -151,27 +152,27 @@ main(int argc,
 	init_pair(2, COLOR_MAGENTA, 0);
 	init_pair(3, COLOR_BLACK, COLOR_WHITE);
 
-	init_color(COLOR_BLACK, CURSEDRGB(0x1c0d57));
-	init_color(COLOR_WHITE, CURSEDRGB(0x48570d));
+/*	init_color(COLOR_BLACK, CURSEDRGB(0x0e062b));
+	init_color(COLOR_WHITE, CURSEDRGB(0xefefef));
 	init_color(COLOR_YELLOW, CURSEDRGB(0xd2ff20));
 	init_color(COLOR_BLUE, CURSEDRGB(0x4d20ff));
-	init_color(COLOR_MAGENTA, CURSEDRGB(0x20ff4d));
+	init_color(COLOR_MAGENTA, CURSEDRGB(0xff20d2));
 	init_color(COLOR_GREEN, CURSEDRGB(0x20ff4d));
 	init_color(COLOR_CYAN, CURSEDRGB(0x20ffbc));
-	init_color(COLOR_RED, CURSEDRGB(0xff2063));
+	init_color(COLOR_RED, CURSEDRGB(0xff2063));*/
 	
-	init_pair(C_PAIR_TEXT, COLOR_YELLOW, COLOR_BLACK);
+	init_pair(C_PAIR_TEXT, COLOR_WHITE, COLOR_BLACK);
 	init_pair(C_PAIR_CHAR, COLOR_RED, COLOR_BLACK);
 	init_pair(C_PAIR_NUMBER, COLOR_MAGENTA, COLOR_BLACK);
 	init_pair(C_PAIR_STRING1, COLOR_RED, COLOR_BLACK);
 	init_pair(C_PAIR_STRING2, COLOR_CYAN, COLOR_BLACK);
-	init_pair(C_PAIR_KEYWORD1, COLOR_GREEN, COLOR_BLACK);
+	init_pair(C_PAIR_KEYWORD1, COLOR_YELLOW, COLOR_BLACK);
 	init_pair(C_PAIR_KEYWORD2, COLOR_BLUE, COLOR_BLACK);
 	init_pair(C_PAIR_COMMENT1, COLOR_WHITE, COLOR_BLACK);
-	init_pair(C_PAIR_FUNCTION, COLOR_BLUE, COLOR_BLACK);
-	init_pair(C_PAIR_PREPROC1, COLOR_RED, COLOR_BLACK);
+	init_pair(C_PAIR_FUNCTION, COLOR_GREEN, COLOR_BLACK);
+	init_pair(C_PAIR_PREPROC1, COLOR_BLUE, COLOR_BLACK);
 	init_pair(C_PAIR_PREPROC2, COLOR_RED, COLOR_BLACK);
-	init_pair(C_PAIR_ERROR, COLOR_WHITE, COLOR_RED);
+	init_pair(C_PAIR_ERROR, COLOR_YELLOW, COLOR_RED);
 	init_pair(C_PAIR_LINENUMBER, COLOR_RED, COLOR_BLACK);
 
 	init_pair(CD_PAIR_EMPTY_LINE_PREFIX, COLOR_CYAN, COLOR_BLACK);

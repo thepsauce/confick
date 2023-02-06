@@ -1,4 +1,12 @@
 bool
+c_state_stringbegin(struct c_state_info *si)
+{
+	siadd((struct state_info*) si, L'\"', 0, C_PAIR_STRING1);
+	sisetstate((struct state_info*) si, C_STATE_STRING);
+	return 0;
+}
+	
+bool
 c_state_string(struct c_state_info *si)
 {
 	if(si->needHexChars)

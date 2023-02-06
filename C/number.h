@@ -72,6 +72,21 @@ c_state_lsuffix(struct c_state_info *si)
 }
 
 bool
+c_state_anynumberbegin(struct c_state_info *si)
+{
+	siadd((struct state_info*) si, si->w, 0, C_PAIR_NUMBER);
+	switch(si->w)
+	{
+	case '0':
+		sisetstate((struct state_info*) si, C_STATE_ZERO);
+		break;
+	default:
+		sisetstate((struct state_info*) si, C_STATE_DECIMAL);
+	}
+	return 0;
+}
+
+bool
 c_state_zero(struct c_state_info *si)
 {
 	switch(si->w)
@@ -94,7 +109,7 @@ c_state_zero(struct c_state_info *si)
 		break;
 	case L'e':
 		siadd((struct state_info*) si, si->w, 0, C_PAIR_NUMBER);
-		sisetstate((struct state_info*) si, C_STATE_EXP);
+		sisetstate((struct state_info*) si, C_STATE_NEGEXP);
 		break;
 	default:
 		return c_check_intsuffix(si);
@@ -116,7 +131,7 @@ c_state_decimal(struct c_state_info *si)
 		break;
 	case L'e':
 		siadd((struct state_info*) si, si->w, 0, C_PAIR_NUMBER);
-		sisetstate((struct state_info*) si, C_STATE_EXP);
+		sisetstate((struct state_info*) si, C_STATE_NEGEXP);
 		break;
 	default:
 		return c_check_intsuffix(si);
@@ -179,10 +194,11 @@ c_state_float(struct c_state_info *si)
 		break;
 	case L'e':
 		siadd((struct state_info*) si, si->w, 0, C_PAIR_NUMBER);
-		sisetstate((struct state_info*) si, C_STATE_EXP);
+		sisetstate((struct state_info*) si, C_STATE_NEGEXP);
 		break;
 	case L'f': case L'F':
 	case L'l': case L'L':
+	case L'd': case L'D':
 		siadd((struct state_info*) si, si->w, 0, C_PAIR_NUMBER);
 		sisetstate((struct state_info*) si, C_STATE_ERRSUFFIX);
 		break;
@@ -221,12 +237,28 @@ c_state_exp(struct c_state_info *si)
 		break;
 	case L'f': case L'F':
 	case L'l': case L'L':
+	case L'd': case L'D':
 		siadd((struct state_info*) si, si->w, 0, C_PAIR_NUMBER);
 		sisetstate((struct state_info*) si, C_STATE_ERRSUFFIX);
 		break;
 	default:
 		sisetstate((struct state_info*) si, C_STATE_ERRSUFFIX);
 		return 1;
+	}
+	return 0;
+}
+
+bool
+c_state_negexp(struct c_state_info *si)
+{
+	switch(si->w)
+	{
+	case L'-':
+		siadd((struct state_info*) si, si->w, 0, C_PAIR_NUMBER);
+		sisetstate((struct state_info*) si, C_STATE_EXP);
+		break;
+	default:
+		return c_state_exp(si);
 	}
 	return 0;
 }

@@ -75,35 +75,36 @@ cddraw(code_t code)
 
 	si = c_state_create();
 	si->window = code->window;
-	si->x = -code->scrollX;
-	si->y = -code->scrollY;
-	si->tx = code->lOff;
-	for(x = -code->scrollX, y = 0; y < h; y++, x = -code->scrollX)
+	si->x = 0;
+	si->y = 0;
+	si->tx = code->lOff - code->scrollX;
+	si->ty = -code->scrollY;
+	si->visX = code->vx;
+	si->visY = code->vy;
+	si->lrMotion = 1;
+	for(iLine = 0; iLine < nLines; iLine++)
 	{
-		iLine = y + code->scrollY;
-		if(iLine >= 0 && iLine < nLines)
-		{
-			line = lines[iLine];
-			n = sprintf(lineNumberBuf, "%d", iLine + 1);
-			wmove(code->window, y, nDigits - n);
-			for(i = 0; i < n; i++)
-				waddch(code->window, lineNumberBuf[i] | A_BOLD | COLOR_PAIR(C_PAIR_LINENUMBER));
-			wmove(code->window, y, lOff);
-			for(i = 0; i < line.nBuf; i++)
-				sifeed(si, line.buf[i]);
-			if(iLine + 1 != nLines)
-				sifeed(si, L'\n');
-		}
-		else if(showLines)
-		{
-			mvwaddch(code->window, y, nDigits - 1, '~' | COLOR_PAIR(CD_PAIR_EMPTY_LINE_PREFIX));
-		}
+		y = iLine - code->scrollY;
+		line = lines[iLine];
+		n = sprintf(lineNumberBuf, "%d", iLine + 1);
+		wmove(code->window, y, nDigits - n);
+		for(i = 0; i < n; i++)
+			waddch(code->window, lineNumberBuf[i] | A_BOLD | COLOR_PAIR(C_PAIR_LINENUMBER));
+		wmove(code->window, y, lOff);
+		for(i = 0; i < line.nBuf; i++)
+			sifeed(si, line.buf[i]);
+		if(iLine + 1 != nLines)
+			sifeed(si, L'\n');
 	}
-	if(showStatus)
-		mvwprintw(code->window, h, 0, "%d:%d;%d:%d", code->text.cursor.y + 1, code->text.cursor.x + 1,
-				code->vy, code->vx);
+	if(showLines)
+	for(; y < h; y++)
+		mvwaddch(code->window, y, nDigits - 1, '~' | COLOR_PAIR(CD_PAIR_EMPTY_LINE_PREFIX));
 	sifeed(si, EOF);
-	//wmove(code->window, vy, vx + lOff);
+	if(showStatus)
+		mvwprintw(code->window, h, 0, "%d:%d; %d:%d; %d:%d", code->text.cursor.y + 1, code->text.cursor.x + 1,
+				si->adjY, si->adjX, code->vy, code->vx);
+	wmove(code->window, si->adjY, si->adjX + lOff);
+	c_state_free(si);
 }
 
 void 
