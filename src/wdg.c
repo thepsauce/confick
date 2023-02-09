@@ -1,3 +1,5 @@
+#include <cfk/wdg.h>
+
 struct {
 	base_t *p;
 	int n, sz;
@@ -18,14 +20,12 @@ int
 bsname(base_t base, 
 		const char *name)
 {
-	if(!base || !(base->flags & BASECREATED) || !name)
-		return ERROR(!base ? "base is null" : 
-				!name ? "name is null" : 
-				"base was not created yet");
-	if(strlen(name) > BASENAME_MAX)
-		return ERROR("string is too long");
-	if(bsfind(name))
-		return WARN("base with that name exists already");
+	ERROR(!base, "base is null");
+	ERROR(!name, "name is null");
+	ERROR(!(base->flags & BASECREATED), "base was not created yet");
+	ERROR(strlen(name) > BASENAME_MAX, "string is too long");
+	
+	WARN(bsfind(name), "base with that name exists already");
 
 	if(Bases.n + 1 > Bases.sz)
 	{
@@ -43,8 +43,8 @@ int
 bssize(base_t base, 
 		size_t size)
 {
-	if(!base || !(base->flags & BASECREATED))
-		return ERROR(!base ? "base is null" : "base was not created yet");
+	ERROR(!base, "base is null");
+	ERROR(!(base->flags & BASECREATED), "base was not created yet");
 
 	base->flags |= BASESIZE;
 	base->size = size;
@@ -55,8 +55,8 @@ int
 bsproc(base_t base, 
 		eventproc_t proc)
 {
-	if(!base || !(base->flags & BASECREATED))
-		return ERROR(!base ? "base is null" : "base was not created yet");
+	ERROR(!base, "base is null");
+	ERROR(!(base->flags & BASECREATED), "base was not created yet");
 
 	base->flags |= BASEPROC;
 	base->proc = proc;
@@ -66,8 +66,7 @@ bsproc(base_t base,
 base_t
 bsfind(const char *name)
 {
-	if(!name)
-		return WARN("name is null", NULL);
+	ERROR(!name, "name is null", NULL);
 	
 	for(int i = 0; i < Bases.n; i++)
 		if(!strcmp(Bases.p[i]->name, name))
@@ -83,15 +82,11 @@ wdgcreate(const char *bsName,
 	WINDOW *win;
 	widget_t wdg;
 
-	if(!bsName)
-		return ERROR("base name is null", NULL);
-	if(!(base = bsfind(bsName)))
-		return WARN("base with that name doesn't exist", NULL);
-	if((base->flags & BASECOMPLETE) != BASECOMPLETE)
-		return WARN("base is not complete", NULL);
-	win = newwin(1, 1, 0, 0);
-	if(!win)
-		return ERROR("could not make new window", NULL);
+	ERROR(!bsName, "base name is null", NULL);
+	ERROR(!(base = bsfind(bsName)), "base with that name doesn't exist", NULL);
+	ERROR((base->flags & BASECOMPLETE) != BASECOMPLETE, "base is incomplete", NULL);
+	ERROR(!(win = newwin(1, 1, 0, 0)), "could not make new window", NULL);
+
 	keypad(win, TRUE);
 	idlok(win, TRUE);
 	idcok(win, TRUE);
@@ -106,7 +101,7 @@ wdgcreate(const char *bsName,
 	if(wdg->base->proc(wdg, WDGINIT, 0))
 	{
 		free(wdg);
-		return WARN("widget refused initializing", NULL);
+		WARN(1, "widget refused initializing", NULL);
 	}
 	return wdg;
 }
@@ -114,8 +109,7 @@ wdgcreate(const char *bsName,
 int
 wdgfree(widget_t wdg)
 {
-	if(!wdg)
-		return ERROR("widget is null");
+	ERROR(!wdg, "widget is null");
 
 	wdg->base->proc(wdg, WDGUNINIT, 0);
 	free(wdg);
@@ -129,8 +123,7 @@ wdgevent(widget_t wdg,
 {
 	base_t base;
 
-	if(!wdg)
-		return ERROR("widget is null");
+	ERROR(!wdg, "widget is null");
 
 	base = wdg->base;
 	return base->proc(wdg, event, key);

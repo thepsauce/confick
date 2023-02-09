@@ -1,3 +1,5 @@
+#include <ctype.h>
+
 static const wchar_t *C_keywords[] = {
 	L"auto",
 	L"__auto_type",
@@ -313,8 +315,7 @@ c_state_create(void)
 int
 c_state_free(struct state_info *si)
 {
-	if(!si)
-		return ERROR("state info is null");
+	ERROR(!si, "state info is null");
 	
 	free(si);
 	return OK;

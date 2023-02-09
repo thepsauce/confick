@@ -1,42 +1,10 @@
-#define _XOPEN_SOURCE_EXTENDED
-#define _GNU_SOURCE
 #include <assert.h>
 #include <ctype.h>
-#include <limits.h>
 #include <locale.h>
 #include <math.h>
 #include <signal.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <curses.h>
-
-#define ARRLEN(a) (sizeof(a)/sizeof*(a))
-
-#define min(a, b) \
-({ \
-	__auto_type __a = (a); \
-	__auto_type __b = (b); \
-	__a<__b?__a:__b; \
-})
-
-#define max(a, b) \
-({ \
-	__auto_type __a = (a); \
-	__auto_type __b = (b); \
-	__a<__b?__b:__a; \
-})
-
-#include "wdgbase.h"
-#include "wdg.h"
-#include "wdgmgr.h"
-#include "text.h"
-#include "state.h"
-#include "C/C.h"
-#include "wdg/code.h"
-
-#define CURSEDRGB(color) ((color>>16)&0xFF)*1000/256, ((color>>8)&0xFF)*1000/256, (color&0xFF)*1000/256
+#include <cfk/wdg.h>
 
 void *keeperPiece;
 

@@ -1,46 +1,40 @@
-struct state_info {
-#define _STATE_INFO_HEADER WINDOW *window; /* cursor information */ \
-	int tx, ty; /* translation of the cursor (this include scrolling and other) */ \
-	int x, y; /* position of the cursor relative to the text origin */ \
-	int visX, visY; /* visual cursor position */ \
-	int maxVX; /* maximum visual x position of current line */ \
-	int adjX, adjY; /* adjusted visual cursor position */ \
-	int curMemX, curMemY, memX, memY; /* position inside memory buffer (line system) */ \
-	int curMemIndex, memIndex; /* position inside memory buffer (applicable for any system) */ \
-	bool lrMotion; /* cursor moved from left to right */ \
-	wchar_t w; \
-	int state; \
-	bool (**stateFuncs)(struct state_info *si); \
-	int stateStack[64]; \
-	int iState
-	_STATE_INFO_HEADER;
-};
+#include <cfk/wdg.h>
 
-void
+int
 sisetstate(struct state_info *si, int state)
-{
+{	
+	ERROR(!si, "state info is null");
+
 	si->state = state;
+	return OK;
 }
 
-void
+int
 sipushstate(struct state_info *si)
 {
-	assert(sizeof(si->stateStack) != si->iState && "stack was overpushed: ran out of state stack space");
+	ERROR(!si, "state info is null");
+	ERROR(sizeof(si->stateStack) == si->iState, "stack was overpushed: ran out of state stack space");
+
 	si->stateStack[si->iState++] = si->state;
+	return OK;
 }
 
-void
+int
 sipushandsetstate(struct state_info *si, int state)
 {
 	sipushstate(si);
 	sisetstate(si, state);
+	return OK;
 }
 
-void
+int
 sipopstate(struct state_info *si)
 {
-	assert(si->iState && "stack was overpopped: each pop needs a precedent push");
+	ERROR(!si, "state info is null");
+	ERROR(!si->iState, "stack was overpopped: each pop needs a precedent push");
+
 	si->state = si->stateStack[--si->iState];
+	return OK;
 }
 
 void
@@ -98,12 +92,14 @@ _sicaretinc(struct state_info *si,
 
 #define siaddextra siadd
 
-void
+int
 siadd(struct state_info *si, wchar_t w, attr_t a, short color_pair)
 {
 	wchar_t ws[2];
 	cchar_t cc;
 	int x, y;
+
+	ERROR(!si, "state info is null");
 
 	ws[0] = w;
 	ws[1] = 0;
@@ -128,16 +124,19 @@ siadd(struct state_info *si, wchar_t w, attr_t a, short color_pair)
 		si->x++;
 		_sicaretinc(si, x, y, 1);
 	}
+	return OK;
 }
 
 // a word shall not contain a new line or tab character (anything that's not one cell wide)
-void
+int
 siaddword(struct state_info *si, const wchar_t *word, attr_t a, short color_pair)
 {
 	wchar_t ws[2];
 	cchar_t cc;
 	int nWord;
 	int x, y;
+
+	ERROR(!si, "state info is null");
 
 	nWord = wcslen(word);
 	ws[1] = 0;
@@ -152,11 +151,15 @@ siaddword(struct state_info *si, const wchar_t *word, attr_t a, short color_pair
 		x++;
 	}
 	si->x += nWord;
+	return OK;
 }
 
-void
+int
 sifeed(struct state_info *si, wchar_t w)
 {
+	ERROR(!si, "state is null");
+
 	si->w = w;
 	while(si->stateFuncs[si->state](si));
+	return OK;
 }

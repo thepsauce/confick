@@ -1,4 +1,5 @@
-void cddraw(code_t code);
+#include <cfk/wdg.h>
+#include "../C/C.h"
 
 void
 cdupdatecursor(code_t code)
@@ -41,23 +42,16 @@ cdupdatecursor(code_t code)
 void
 cddraw(code_t code)
 {
-	line_t *lines, line;
-	int nLines;
-	int i, n;
+	struct txbuffer *buf;
+	wchar_t *data;
+	int n;
 	int x, y;
 	int w, h;
 	int iLine;
 	int lOff;
 	bool showLines;
 	bool showStatus;
-	int num, nDigits;
-	char lineNumberBuf[3 + (int) log10((double) INT_MAX)];
 	struct state_info *si;
-
-	lines = code->text.lines;
-	nLines = code->text.nLines;
-
-	for(num = nLines, nDigits = 0; num; num /= 10, nDigits++);
 
 	getbegyx(code->window, y, x);
 	getmaxyx(code->window, h, w);
@@ -67,7 +61,7 @@ cddraw(code_t code)
 	showLines = !!(code->flags & CDFSHOWLINES);
 	showStatus = !!(code->flags & CDFSHOWSTATUS);
 	
-	code->lOff = lOff = showLines * (nDigits + 1);
+	code->lOff = lOff = 0;
 	code->bOff = showStatus;
 	h -= showStatus;
 
@@ -82,27 +76,12 @@ cddraw(code_t code)
 	si->visX = code->vx;
 	si->visY = code->vy;
 	si->lrMotion = 1;
-	for(iLine = 0; iLine < nLines; iLine++)
-	{
-		y = iLine - code->scrollY;
-		line = lines[iLine];
-		n = sprintf(lineNumberBuf, "%d", iLine + 1);
-		wmove(code->window, y, nDigits - n);
-		for(i = 0; i < n; i++)
-			waddch(code->window, lineNumberBuf[i] | A_BOLD | COLOR_PAIR(C_PAIR_LINENUMBER));
-		wmove(code->window, y, lOff);
-		for(i = 0; i < line.nBuf; i++)
-			sifeed(si, line.buf[i]);
-		if(iLine + 1 != nLines)
-			sifeed(si, L'\n');
-	}
-	if(showLines)
-	for(; y < h; y++)
-		mvwaddch(code->window, y, nDigits - 1, '~' | COLOR_PAIR(CD_PAIR_EMPTY_LINE_PREFIX));
+	for(buf = code->text.first; buf; buf = buf->next)
+	for(n = buf->nData, data = buf->data; n; n--, data++)
+		sifeed(si, *data);
 	sifeed(si, EOF);
 	if(showStatus)
-		mvwprintw(code->window, h, 0, "%d:%d; %d:%d; %d:%d", code->text.cursor.y + 1, code->text.cursor.x + 1,
-				si->adjY, si->adjX, code->vy, code->vx);
+		mvwprintw(code->window, h, 0, "%d:%d; %d:%d", si->adjY, si->adjX, code->vy, code->vx);
 	wmove(code->window, si->adjY, si->adjX + lOff);
 	c_state_free(si);
 }
@@ -142,14 +121,14 @@ void cdend(code_t code)
 void
 cdremove(code_t code)
 {
-	txremove(&code->text);
+	txdelete(&code->text);
 }
 
 void
 cdleftremove(code_t code)
 {
 	code->vx--;
-	txleftremove(&code->text);
+	//txleftremove(&code->text);
 }
 
 int 

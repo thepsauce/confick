@@ -1,3 +1,5 @@
+#include <cfk/wdg.h>
+
 widget_t FirstWidget;
 widget_t Focus;
 int SizeX, SizeY;
@@ -8,8 +10,7 @@ wdgattach(widget_t wdg,
 {
 	widget_t last;
 	
-	if(!wdg)
-		return ERROR("widget is null");
+	ERROR(!wdg, "widget is null");
 
 	wdg->parent = parent;
 	if(!parent)
@@ -48,8 +49,7 @@ wdgdetach(widget_t wdg)
 {
 	widget_t parent;
 
-	if(!wdg)
-		return ERROR("widget is null");
+	ERROR(!wdg, "widget is null");
 
 	parent = wdg->parent;
 	wdg->parent = NULL;
