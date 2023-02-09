@@ -34,8 +34,8 @@ struct widget;
 // #define OK 0 // curses.h already defines an OK with value 0
 #define WARN(cond, msg, ...) if(cond) return ({ fprintf(stderr, "%s:%s:%d > %s\n", __FILE__, __FUNCTION__, __LINE__, (msg)); 1; __VA_ARGS__; })
 #define ERROR(cond, msg, ...) if(cond) return ({ fprintf(stderr, "%s:%s:%d > %s\n", __FILE__, __FUNCTION__, __LINE__, (msg)); exit(-1); -1; __VA_ARGS__; })
-#define CHECK_PARAM(cond, msg) ERROR(cond, msg)
 
+int safe_init(void);
 void *safe_malloc(size_t size);
 void *safe_realloc(void *ptr, size_t newSize);
 void *safe_strdup(const char *str);
@@ -78,6 +78,7 @@ int wdgfree(widget_t wdg);
 #define WDGUNINIT 2
 #define WDGKEY 3
 int wdgevent(widget_t wdg, int event, int key);
+int wdgattach(widget_t wdg, widget_t parent);
 
 // widget manager
 void wdgmgrdiscard(void);
@@ -134,6 +135,7 @@ struct state_info {
 int sisetstate(struct state_info *si, int state);
 int sipushstate(struct state_info *si);
 int sipopstate(struct state_info *si);
+int sipushandsetstate(struct state_info *si, int state);
 #define siaddextra siadd
 int siadd(struct state_info *si, int c, attr_t a, short color_pair);
 int siaddword(struct state_info *si, const wchar_t *word, attr_t a, short color_pair);

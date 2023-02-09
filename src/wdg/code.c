@@ -1,6 +1,8 @@
 #include <cfk/wdg.h>
 #include "../C/C.h"
 
+void cddraw(code_t code);
+
 void
 cdupdatecursor(code_t code)
 {

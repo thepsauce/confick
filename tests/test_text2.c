@@ -1,6 +1,4 @@
-#include "test.h"
-#include "../wdgbase.h"
-#include "../text2.h"
+#include <cfk/wdg.h>
 
 int
 main(void)
